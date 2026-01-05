@@ -1,0 +1,73 @@
+{
+  "version": "1.0",
+  "caps": [
+    {
+      "type": "text",
+      "name": "platformName",
+      "value": "Android",
+      "enabled": true
+    },
+    {
+      "type": "text",
+      "name": "appium:automationName",
+      "value": "UiAutomator2",
+      "enabled": true
+    },
+    {
+      "type": "text",
+      "name": "appium:deviceName",
+      "value": "Android Emulator",
+      "enabled": true
+    },
+    {
+      "type": "text",
+      "name": "appium:platformVersion",
+      "value": "14",
+      "enabled": true
+    },
+    {
+      "type": "text",
+      "name": "appium:app",
+      "value": "C:\\Users\\GME\\appium-mobile-test\\apk\\[Stg]GME_7.13.0.apk",
+      "enabled": true
+    },
+    {
+      "type": "boolean",
+      "name": "appium:noReset",
+      "value": false,
+      "enabled": true
+    },
+    {
+      "type": "boolean",
+      "name": "appium:autoGrantPermissions",
+      "value": true,
+      "enabled": true
+    }
+  ],
+  "server": {
+    "local": {},
+    "remote": {},
+    "advanced": {},
+    "sauce": {
+      "dataCenter": "us-west-1"
+    },
+    "headspin": {},
+    "browserstack": {},
+    "lambdatest": {},
+    "testingbot": {},
+    "experitest": {},
+    "roboticmobi": {},
+    "remotetestkit": {},
+    "bitbar": {},
+    "kobiton": {},
+    "perfecto": {},
+    "pcloudy": {},
+    "mobitru": {},
+    "tvlabs": {},
+    "testcribe": {},
+    "webmate": {},
+    "fireflinkdevicefarm": {}
+  },
+  "serverType": "remote",
+  "visibleProviders": []
+}

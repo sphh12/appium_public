@@ -1,0 +1,18 @@
+{
+  "name": "appium-mobile-test",
+  "version": "1.0.0",
+  "description": "Appium 모바일 자동화 테스트 프로젝트",
+  "scripts": {
+    "appium": "appium",
+    "appium:start": "appium --address 127.0.0.1 --port 4723",
+    "appium:drivers": "appium driver list --installed",
+    "test:android": "pytest tests/android -v --platform=android",
+    "test:ios": "pytest tests/ios -v --platform=ios",
+    "test:all": "pytest tests -v"
+  },
+  "keywords": ["appium", "mobile", "testing", "automation"],
+  "license": "ISC",
+  "devDependencies": {
+    "appium": "^3.1.2"
+  }
+}

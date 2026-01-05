@@ -1,0 +1,41 @@
+# Python
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Node.js
+node_modules/
+package-lock.json
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Test results
+reports/
+allure-results/
+allure-report/
+*.html
+!templates/*.html
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# APK files (too large for GitLab)
+apk/
+*.apk
+
+# PDF files (generated)
+*.pdf
