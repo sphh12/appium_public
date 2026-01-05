@@ -33,9 +33,7 @@ Thumbs.db
 # Logs
 *.log
 
-# APK files (too large for GitLab)
-apk/
-*.apk
+# APK files are tracked with Git LFS
 
 # PDF files (generated)
 *.pdf
