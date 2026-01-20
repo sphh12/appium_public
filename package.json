@@ -8,9 +8,16 @@
     "appium:drivers": "appium driver list --installed",
     "test:android": "pytest tests/android -v --platform=android",
     "test:ios": "pytest tests/ios -v --platform=ios",
-    "test:all": "pytest tests -v"
+    "test:all": "pytest tests -v",
+    "allure:run": "python tools/run_allure.py -- tests/test_01.py -v --platform=android --record-video --clean-alluredir",
+    "allure:run:no-video": "python tools/run_allure.py -- tests/test_01.py -v --platform=android --clean-alluredir"
   },
-  "keywords": ["appium", "mobile", "testing", "automation"],
+  "keywords": [
+    "appium",
+    "mobile",
+    "testing",
+    "automation"
+  ],
   "license": "ISC",
   "devDependencies": {
     "appium": "^3.1.2"
