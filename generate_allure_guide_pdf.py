@@ -5,6 +5,9 @@ Allure 리포트 설정 가이드 PDF 생성
 from fpdf import FPDF
 import os
 
+# 프로젝트 루트 경로 자동 계산
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+
 
 class PDF(FPDF):
     def __init__(self):
@@ -439,7 +442,7 @@ rmdir /s /q allure-results""")
     )
 
     # ========== PDF 저장 ==========
-    output_path = "C:/Users/GME/appium-mobile-test/pdf/Allure_Report_Guide.pdf"
+    output_path = os.path.join(PROJECT_ROOT, "pdf", "Allure_Report_Guide.pdf")
     pdf.output(output_path)
     print(f"PDF 생성 완료: {output_path}")
     return output_path

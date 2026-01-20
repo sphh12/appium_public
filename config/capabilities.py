@@ -2,6 +2,10 @@
 Appium Desired Capabilities 설정
 Android 및 iOS 디바이스/에뮬레이터 설정
 """
+import os
+
+# 프로젝트 루트 경로 자동 계산
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Android 에뮬레이터 설정
 ANDROID_CAPS = {
@@ -9,7 +13,7 @@ ANDROID_CAPS = {
     "automationName": "UiAutomator2",
     "deviceName": "Android Emulator",  # 또는 실제 디바이스 이름
     "platformVersion": "14",  # Android 버전
-    "app": r"C:\Users\GME\appium-mobile-test\apk\[Stg]GME_7.13.0.apk",  # APK 파일 경로
+    "app": os.path.join(PROJECT_ROOT, "apk", "[Stg]GME_7.13.0.apk"),  # APK 파일 경로
     # "appPackage": "com.example.app",  # 앱 패키지명
     # "appActivity": ".MainActivity",  # 시작 액티비티
     "noReset": False,
