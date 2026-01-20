@@ -609,7 +609,7 @@ xcrun simctl list devices""")
     pdf.cell(0, 8, "프로젝트 위치: C:\\Users\\GME\\appium-mobile-test", align="C", new_x="LMARGIN", new_y="NEXT")
 
     # ========== PDF 저장 ==========
-    output_path = "C:/Users/GME/appium-mobile-test/Appium_Setup_Guide.pdf"
+    output_path = "C:/Users/GME/appium-mobile-test/pdf/Appium_Setup_Guide.pdf"
     pdf.output(output_path)
     print(f"PDF 생성 완료: {output_path}")
     return output_path

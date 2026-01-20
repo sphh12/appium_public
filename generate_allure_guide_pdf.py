@@ -439,7 +439,7 @@ rmdir /s /q allure-results""")
     )
 
     # ========== PDF 저장 ==========
-    output_path = "C:/Users/GME/appium-mobile-test/Allure_Report_Guide.pdf"
+    output_path = "C:/Users/GME/appium-mobile-test/pdf/Allure_Report_Guide.pdf"
     pdf.output(output_path)
     print(f"PDF 생성 완료: {output_path}")
     return output_path
