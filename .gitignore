@@ -18,6 +18,7 @@ package-lock.json
 .vscode/
 *.swp
 *.swo
+.history/
 
 # Test results
 reports/

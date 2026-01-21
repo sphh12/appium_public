@@ -171,6 +171,26 @@ if [[ "$SKIP_CHECK" == false ]]; then
                             DEVICE_NAME=$(adb devices 2>/dev/null | grep -w "device" | head -1 | cut -f1)
                             echo -e "    ${GREEN}[OK] Emulator started ($DEVICE_NAME)${NC}"
                             DEVICE_CONNECTED=true
+
+                            # Some environments report boot completed before ADB is fully in 'device' state.
+                            # Wait a bit longer to avoid Appium timing out while searching for a connected device.
+                            echo -e "    ${BLUE}[AUTO] Waiting for ADB to be ready...${NC}"
+                            ADB_READY=false
+                            for j in {1..30}; do
+                                STATE=$(adb get-state 2>/dev/null | tr -d '\r')
+                                if [[ "$STATE" == "device" ]]; then
+                                    ADB_READY=true
+                                    break
+                                fi
+                                sleep 2
+                            done
+
+                            if [[ "$ADB_READY" == true ]]; then
+                                echo -e "    ${GREEN}[OK] ADB is ready${NC}"
+                            else
+                                echo -e "    ${RED}[FAIL] ADB not ready (still offline).${NC}"
+                                DEVICE_CONNECTED=false
+                            fi
                             break
                         fi
                         # Show progress every 10 seconds

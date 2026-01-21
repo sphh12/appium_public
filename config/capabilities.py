@@ -7,12 +7,15 @@ import os
 # 프로젝트 루트 경로 자동 계산
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+# Android 플랫폼 버전(선택): 지정하면 해당 OS 버전 디바이스/에뮬레이터만 매칭합니다.
+# 예) PowerShell: $env:ANDROID_PLATFORM_VERSION = "12"
+ANDROID_PLATFORM_VERSION = os.getenv("ANDROID_PLATFORM_VERSION")
+
 # Android 에뮬레이터 설정
 ANDROID_CAPS = {
     "platformName": "Android",
     "automationName": "UiAutomator2",
     "deviceName": "Android Emulator",  # 또는 실제 디바이스 이름
-    "platformVersion": "14",  # Android 버전
     "app": os.path.join(PROJECT_ROOT, "apk", "[Stg]GME_7.13.0.apk"),  # APK 파일 경로
     # "appPackage": "com.example.app",  # 앱 패키지명
     # "appActivity": ".MainActivity",  # 시작 액티비티
@@ -21,6 +24,9 @@ ANDROID_CAPS = {
     "newCommandTimeout": 300,
     "autoGrantPermissions": True,
 }
+
+if ANDROID_PLATFORM_VERSION:
+    ANDROID_CAPS["platformVersion"] = ANDROID_PLATFORM_VERSION
 
 # iOS 시뮬레이터 설정 (Mac에서만 동작)
 IOS_CAPS = {
