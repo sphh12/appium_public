@@ -2,6 +2,18 @@
 
 이 문서는 **처음 clone 후 바로 실행했을 때 실패했던 이유**와, **새 PC/노트북에서 재현 가능하게 만드는 체크리스트**를 정리합니다.
 
+## Quick Start (원샷)
+새 PC/노트북에서 아래 3단계로 끝내는 것을 목표로 합니다.
+
+1) `home` 브랜치로 클론
+- `git clone -b home --single-branch git@gitlab.com:sphh12/appium.git`
+
+2) 원샷 세팅(권장: PowerShell)
+- `powershell -ExecutionPolicy Bypass -File shell/bootstrap.ps1`
+
+3) 실행
+- `./shell/run-app.sh`
+
 ## 왜 clone 직후에 안 됐나?
 `git clone`은 **소스 코드만** 가져옵니다. 하지만 Appium 테스트는 아래 요소들이 추가로 필요합니다.
 
@@ -12,7 +24,21 @@
 
 즉, clone만으로는 실행에 필요한 “환경”이 자동으로 갖춰지지 않아 실패할 수 있습니다.
 
+## 클론(브랜치) 방법
+기본 브랜치가 `main`이면 `git clone`만 했을 때 `main`이 체크아웃됩니다.
+재현 가능한 실행 환경을 목표로 하면 `home` 브랜치를 권장합니다.
+
+- 권장(원샷 세팅 포함):
+  - `git clone -b home --single-branch git@gitlab.com:sphh12/appium.git`
+
+- 테스트 코드만 확인/실행(원본 그대로):
+  - `git clone -b test --single-branch git@gitlab.com:sphh12/appium.git`
+
+- HTTPS로 클론해야 하면(회사 정책 등):
+  - `git clone -b home --single-branch https://gitlab.com/sphh12/appium.git`
+
 ## 클론 후 체크리스트(Windows 기준)
+아래 체크리스트는 “원샷 스크립트가 실패했을 때” 수동으로 원인을 찾는 용도입니다.
 
 ## 원샷(권장): 부트스트랩 스크립트
 새 PC/노트북에서 아래 한 번으로 **venv 생성/의존성 설치/Appium 드라이버 설치/Allure(로컬) 준비**까지 진행합니다.
