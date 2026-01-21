@@ -14,6 +14,18 @@
 
 ## 클론 후 체크리스트(Windows 기준)
 
+## 원샷(권장): 부트스트랩 스크립트
+새 PC/노트북에서 아래 한 번으로 **venv 생성/의존성 설치/Appium 드라이버 설치/Allure(로컬) 준비**까지 진행합니다.
+
+PowerShell(권장):
+- `powershell -ExecutionPolicy Bypass -File shell/bootstrap.ps1`
+
+Android 버전을 고정해서 매칭하고 싶으면(선택):
+- `powershell -ExecutionPolicy Bypass -File shell/bootstrap.ps1 -AndroidPlatformVersion 12`
+
+이후 실행:
+- `./shell/run-app.sh`
+
 ### 1) Appium 서버 확인
 PowerShell:
 
@@ -51,8 +63,9 @@ Appium 2는 드라이버가 별도 플러그인처럼 관리됩니다.
 - 설치 확인
   - `allure --version`
 
-- 설치(권한 정책에 따라 불가할 수도 있음)
-  - `npm install -g allure-commandline`
+- 설치(권한 정책에 따라 전역 설치가 불가할 수도 있음)
+  - 전역 설치: `npm install -g allure-commandline`
+  - 전역 설치가 막힌 경우(권장): 프로젝트 폴더에서 `npm install` 후 `npx allure --version`
 
 ## 대표 실패 사례와 원인
 

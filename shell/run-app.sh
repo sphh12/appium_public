@@ -20,6 +20,9 @@ GENERATE_REPORT=false
 SKIP_CHECK=false
 AUTO_START=true
 
+APPIUM_CMD="npx appium"
+ALLURE_CMD="allure"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -110,7 +113,7 @@ if [[ "$SKIP_CHECK" == false ]]; then
         echo -e "${RED}Not Running${NC}"
         if [[ "$AUTO_START" == true ]]; then
             echo -e "    ${BLUE}[AUTO] Starting Appium server...${NC}"
-            npx appium > /dev/null 2>&1 &
+            $APPIUM_CMD > /dev/null 2>&1 &
             APPIUM_PID=$!
             echo -e "    ${BLUE}[AUTO] Waiting for Appium to start...${NC}"
 
@@ -247,6 +250,51 @@ if [[ "$SKIP_CHECK" == false ]]; then
 
     echo ""
 
+    # Check 4: Appium Driver (Android)
+    if [[ "$PLATFORM" == "android" ]]; then
+        echo -n "  - Appium driver (UiAutomator2): "
+        if $APPIUM_CMD driver list --installed 2>/dev/null | grep -qi "uiautomator2@"; then
+            echo -e "${GREEN}Installed${NC}"
+        else
+            echo -e "${RED}Not Installed${NC}"
+            if [[ "$AUTO_START" == true ]]; then
+                echo -e "    ${BLUE}[AUTO] Installing UiAutomator2 driver...${NC}"
+                if $APPIUM_CMD driver install uiautomator2; then
+                    echo -e "    ${GREEN}[OK] UiAutomator2 driver installed${NC}"
+                else
+                    echo -e "    ${RED}[FAIL] Could not install UiAutomator2 driver${NC}"
+                fi
+            else
+                echo -e "    ${YELLOW}[FIX] Run: appium driver install uiautomator2${NC}"
+            fi
+        fi
+    fi
+
+    # Check 5: Allure CLI (report)
+    echo -n "  - Allure CLI:               "
+    if command -v allure &> /dev/null; then
+        echo -e "${GREEN}Found (global)${NC}"
+    else
+        # Prefer local install via npm (npx)
+        if npx --yes allure --version > /dev/null 2>&1; then
+            ALLURE_CMD="npx --yes allure"
+            echo -e "${GREEN}Found (npx/local)${NC}"
+        else
+            echo -e "${RED}Not Found${NC}"
+            if [[ "$AUTO_START" == true ]]; then
+                echo -e "    ${BLUE}[AUTO] Installing allure-commandline locally...${NC}"
+                if npm install --no-audit --no-fund; then
+                    ALLURE_CMD="npx --yes allure"
+                    echo -e "    ${GREEN}[OK] allure-commandline installed (use npx allure)${NC}"
+                else
+                    echo -e "    ${RED}[FAIL] npm install failed (cannot install allure-commandline)${NC}"
+                fi
+            else
+                echo -e "    ${YELLOW}[FIX] Run: npm install (then use npx allure) or install allure globally${NC}"
+            fi
+        fi
+    fi
+
     # Final check
     if [[ "$APPIUM_RUNNING" == false || "$DEVICE_CONNECTED" == false || "$VENV_EXISTS" == false ]]; then
         echo -e "${RED}[ERROR] Prerequisites not met.${NC}"
@@ -326,8 +374,11 @@ echo ""
 # ========================================
 # Always generate report to timestamp folder
 echo "[STEP 4] Generating Allure HTML report..."
-allure generate "$RESULTS_DIR" -o "$REPORT_DIR" --clean
-echo -e "${GREEN}[OK] Report generated: $REPORT_DIR${NC}"
+if $ALLURE_CMD generate "$RESULTS_DIR" -o "$REPORT_DIR" --clean; then
+    echo -e "${GREEN}[OK] Report generated: $REPORT_DIR${NC}"
+else
+    echo -e "${RED}[FAIL] Report generation failed. Is Allure installed?${NC}"
+fi
 
 # Update LATEST.txt for next run's history
 mkdir -p "allure-reports"
@@ -339,7 +390,7 @@ if [[ "$OPEN_REPORT" == true ]]; then
     echo "Opening Allure report..."
     echo "  (Press Ctrl+C to stop the server)"
     echo ""
-    allure open "$REPORT_DIR"
+    $ALLURE_CMD open "$REPORT_DIR"
 fi
 
 # ========================================
