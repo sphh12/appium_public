@@ -1,3 +1,5 @@
+import time
+
 import pytest
 import allure
 from appium.webdriver.common.appiumby import AppiumBy
@@ -29,8 +31,10 @@ class TestAndroidSample:
             el4.click()
 
         with allure.step("화면 닫기"):
-            el5 = android_driver.find_element(by=AppiumBy.ID, value="android:id/content")
-            el5.click()
+            # 언어 선택 후 화면 갱신 대기
+            time.sleep(1)
+            # 뒤로가기 버튼으로 화면 닫기 (더 안정적)
+            android_driver.back()
 
     @allure.feature("인증")
     @allure.story("정상 로그인")

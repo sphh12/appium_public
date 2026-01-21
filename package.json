@@ -1,5 +1,5 @@
 {
-  "name": "appium-mobile-test",
+  "name": "appium",
   "version": "1.0.0",
   "description": "Appium 모바일 자동화 테스트 프로젝트",
   "scripts": {

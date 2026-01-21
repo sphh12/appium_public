@@ -28,7 +28,7 @@
     {
       "type": "text",
       "name": "appium:app",
-      "value": "C:\\Users\\GME\\appium-mobile-test\\apk\\[Stg]GME_7.13.0.apk",
+      "value": "C:\\Users\\GME\\appium\\apk\\[Stg]GME_7.13.0.apk",
       "enabled": true
     },
     {

@@ -2,12 +2,14 @@
 import base64
 from datetime import datetime
 import json
+import time
 from pathlib import Path
 
 import pytest
 from appium import webdriver
 from appium.options.android import UiAutomator2Options
 from appium.options.ios import XCUITestOptions
+from appium.webdriver.common.appiumby import AppiumBy
 
 from config.capabilities import ANDROID_CAPS, IOS_CAPS, get_appium_server_url
 
@@ -32,6 +34,39 @@ def _safe_allure_attach(name: str, data: bytes, attachment_type):
         allure.attach(data, name=name, attachment_type=attachment_type)
     except Exception:
         return
+
+
+def _dismiss_system_ui_dialog(driver, max_attempts=3, wait_after_dismiss=2):
+    """
+    'System UI isn't responding' 팝업이 있으면 Wait 버튼을 클릭하여 닫음
+
+    Args:
+        driver: Appium 드라이버
+        max_attempts: 최대 시도 횟수
+        wait_after_dismiss: 팝업 닫은 후 대기 시간(초)
+    """
+    for attempt in range(max_attempts):
+        try:
+            # 짧은 implicit wait 설정 (팝업 확인용)
+            driver.implicitly_wait(2)
+
+            # "Wait" 버튼 찾기 (android.widget.Button with text "Wait")
+            wait_button = driver.find_element(
+                by=AppiumBy.XPATH,
+                value="//android.widget.Button[@text='Wait' or @text='기다리기' or @text='대기']"
+            )
+            wait_button.click()
+            print(f"[INFO] System UI dialog dismissed (attempt {attempt + 1})")
+
+            # 팝업 닫은 후 시스템 안정화 대기
+            time.sleep(wait_after_dismiss)
+
+        except Exception:
+            # 팝업이 없으면 정상 - 루프 종료
+            break
+        finally:
+            # implicit wait 원복
+            driver.implicitly_wait(10)
 
 
 def pytest_addoption(parser):
@@ -190,6 +225,10 @@ def driver(request, platform):
     )
     driver.implicitly_wait(10)
 
+    # Android인 경우 System UI 팝업 처리
+    if platform == "android":
+        _dismiss_system_ui_dialog(driver)
+
     if request.config.getoption("--record-video"):
         try:
             driver.start_recording_screen()
@@ -223,6 +262,9 @@ def android_driver(request):
         options=options
     )
     driver.implicitly_wait(10)
+
+    # System UI 팝업 처리 (에뮬레이터 부팅 직후 발생 가능)
+    _dismiss_system_ui_dialog(driver)
 
     if request.config.getoption("--record-video"):
         try:

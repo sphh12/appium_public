@@ -38,3 +38,6 @@ Thumbs.db
 
 # PDF files (generated)
 *.pdf
+
+# Appium Inspector session files (contains user-specific paths)
+*.appiumsession

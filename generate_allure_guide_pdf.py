@@ -164,7 +164,7 @@ def create_allure_guide_pdf():
     pdf.section_title("2.1 allure-pytest 설치 (Python 패키지)")
     pdf.body_text("pytest에서 Allure 결과를 생성하기 위한 패키지입니다.")
     pdf.code_block("""# 가상환경 활성화 후 실행
-cd C:\\Users\\GME\\appium-mobile-test
+cd C:\\Users\\GME\\appium
 .\\venv\\Scripts\\Activate.ps1
 
 # allure-pytest 설치

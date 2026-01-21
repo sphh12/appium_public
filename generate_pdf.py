@@ -195,10 +195,10 @@ def create_pdf():
     pdf.section_title("STEP 1: 프로젝트 폴더 생성")
     pdf.body_text("테스트 프로젝트를 저장할 폴더를 생성하고 이동합니다.")
     pdf.code_block("""# 프로젝트 폴더 생성
-mkdir appium-mobile-test
+mkdir appium
 
 # 폴더로 이동
-cd appium-mobile-test""")
+cd appium""")
     pdf.ln(2)
 
     pdf.section_title("STEP 2: Node.js 패키지 초기화 및 Appium 설치")
@@ -320,7 +320,7 @@ pip list""")
     pdf.chapter_title("4. 프로젝트 폴더 구조")
     pdf.body_text("프로젝트의 각 폴더와 파일이 어떤 역할을 하는지 설명합니다.")
     pdf.ln(2)
-    pdf.code_block("""appium-mobile-test/
+    pdf.code_block("""appium/
 |
 |-- config/                 <- 설정 파일 폴더
 |   |-- capabilities.py     <- 디바이스 설정 (중요!)
@@ -402,18 +402,18 @@ addopts = -v --tb=short    # 상세 출력, 짧은 에러 표시""")
 
     pdf.section_title("STEP 2: 프로젝트 폴더로 이동")
     pdf.body_text("아래 명령어를 복사하여 붙여넣기 합니다.")
-    pdf.code_block("cd C:\\Users\\GME\\appium-mobile-test")
+    pdf.code_block("cd C:\\Users\\GME\\appium")
     pdf.ln(2)
 
     pdf.section_title("STEP 3: 가상환경 활성화")
     pdf.body_text("Python 가상환경을 활성화합니다. 프롬프트 앞에 (venv)가 나타나면 성공입니다.")
     pdf.code_block(".\\venv\\Scripts\\activate")
-    pdf.tip_box("(venv) C:\\Users\\GME\\appium-mobile-test> 와 같이 표시되어야 합니다.")
+    pdf.tip_box("(venv) C:\\Users\\GME\\appium> 와 같이 표시되어야 합니다.")
     pdf.ln(2)
 
     pdf.section_title("STEP 4: Appium 서버 시작")
     pdf.body_text("새 명령 프롬프트 창을 열고, 같은 폴더에서 Appium 서버를 시작합니다.")
-    pdf.code_block("""cd C:\\Users\\GME\\appium-mobile-test
+    pdf.code_block("""cd C:\\Users\\GME\\appium
 npm run appium:start""")
     pdf.body_text("'Appium REST http interface listener started' 메시지가 나오면 성공입니다.")
     pdf.warning_box("이 창은 테스트가 끝날 때까지 닫지 마세요!")
@@ -609,7 +609,7 @@ xcrun simctl list devices""")
     pdf.ln(20)
     pdf.set_font(pdf.korean_font, "", 9)
     pdf.set_text_color(150, 150, 150)
-    pdf.cell(0, 8, "프로젝트 위치: C:\\Users\\GME\\appium-mobile-test", align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 8, "프로젝트 위치: C:\\Users\\GME\\appium", align="C", new_x="LMARGIN", new_y="NEXT")
 
     # ========== PDF 저장 ==========
     output_path = os.path.join(PROJECT_ROOT, "pdf", "Appium_Setup_Guide.pdf")
