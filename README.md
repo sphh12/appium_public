@@ -167,15 +167,30 @@ pip list | grep -i appium
 
 ### 방법 1: Shell 스크립트 (Git Bash) - 권장
 ```bash
-# 특정 테스트 실행
-./shell/run-app.sh --test test_Login
+# 권장: 루트 래퍼 스크립트(= shell/run-app.sh 호출)
+# 단일 파일 실행(단축 옵션): tests/<platform>/<file>.py 를 자동 실행
+./run-app.sh --xml_test
+./run-app.sh --gme1_test
+
+# 단일 테스트만 실행 (-k 필터)
+./run-app.sh --gme1_test --test test_Login
+
+# 여러 파일을 지정한 순서대로 실행
+./run-app.sh --files "tests/android/gme1_test.py tests/android/xml_test.py"
+
+# 폴더(플랫폼 전체) 실행: tests/<platform> 폴더 전체
+./run-app.sh --all
 
 # 모든 테스트 실행 + Allure 리포트
-./shell/run-app.sh --all --report
+./run-app.sh --all --report
 
 # 도움말
-./shell/run-app.sh --help
+./run-app.sh --help
 ```
+
+참고:
+- 기본 플랫폼은 android 입니다. iOS는 `--platform ios` 옵션을 사용하세요.
+- 예전 단축 옵션 `--test_xml` / `--test_xml.py` 도 `xml_test.py`로 자동 매핑됩니다.
 
 스크립트가 자동으로 처리하는 것:
 - Appium 서버 실행 여부 확인 (없으면 자동 시작)
@@ -193,7 +208,10 @@ emulator -avd Pixel_6
 
 # 터미널 3: 테스트 실행
 .\venv\Scripts\activate
-pytest tests/android/test_01.py -v --platform=android
+pytest tests/android/gme1_test.py -v --platform=android
+
+# xml 기반 시나리오 테스트만 실행
+pytest tests/android/xml_test.py -v --platform=android
 ```
 
 ### 방법 3: npm 스크립트
@@ -241,7 +259,7 @@ appium/
 │   └── sample_page.py      # 페이지 객체
 ├── tests/
 │   ├── android/            # Android 테스트
-│   │   └── test_01.py      # 메인 테스트 파일
+│   │   └── gme1_test.py    # 메인 테스트 파일
 │   └── ios/                # iOS 테스트
 ├── shell/
 │   └── run-app.sh          # 테스트 실행 스크립트

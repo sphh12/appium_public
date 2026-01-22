@@ -9,8 +9,8 @@
     "test:android": "pytest tests/android -v --platform=android",
     "test:ios": "pytest tests/ios -v --platform=ios",
     "test:all": "pytest tests -v",
-    "allure:run": "python tools/run_allure.py -- tests/test_01.py -v --platform=android --record-video --clean-alluredir",
-    "allure:run:no-video": "python tools/run_allure.py -- tests/test_01.py -v --platform=android --clean-alluredir"
+    "allure:run": "python tools/run_allure.py -- tests/android/gme1_test.py -v --platform=android --record-video --clean-alluredir",
+    "allure:run:no-video": "python tools/run_allure.py -- tests/android/gme1_test.py -v --platform=android --clean-alluredir"
   },
   "keywords": [
     "appium",

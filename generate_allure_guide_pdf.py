@@ -205,12 +205,12 @@ allure --version""")
 
     pdf.section_title("3.1 기본 실행 명령어")
     pdf.code_block("""# 테스트 실행 + Allure 결과 생성
-python -m pytest tests/test_01.py -v --platform=android --alluredir=allure-results""")
+python -m pytest tests/android/gme1_test.py -v --platform=android --alluredir=allure-results""")
     pdf.ln(2)
 
     pdf.section_title("옵션 설명")
     pdf.table_row("옵션", "설명", header=True)
-    pdf.table_row("tests/test_01.py", "실행할 테스트 파일")
+    pdf.table_row("tests/android/gme1_test.py", "실행할 테스트 파일")
     pdf.table_row("-v", "상세 출력 (verbose)")
     pdf.table_row("--platform=android", "Android 플랫폼 지정")
     pdf.table_row("--alluredir=allure-results", "Allure 결과 저장 폴더")
@@ -221,10 +221,10 @@ python -m pytest tests/test_01.py -v --platform=android --alluredir=allure-resul
 python -m pytest tests/ -v --platform=android --alluredir=allure-results
 
 # 특정 테스트 클래스만 실행
-python -m pytest tests/test_01.py::TestAndroidSample -v --platform=android --alluredir=allure-results
+python -m pytest tests/android/gme1_test.py::TestAndroidSample -v --platform=android --alluredir=allure-results
 
 # 특정 테스트 함수만 실행
-python -m pytest tests/test_01.py::TestAndroidSample::test_Login -v --platform=android --alluredir=allure-results""")
+python -m pytest tests/android/gme1_test.py::TestAndroidSample::test_Login -v --platform=android --alluredir=allure-results""")
     pdf.ln(2)
 
     pdf.warning_box("--alluredir 옵션을 빼면 Allure 결과가 생성되지 않습니다!")
@@ -385,10 +385,10 @@ def pytest_runtest_makereport(item, call):
 
     pdf.section_title("테스트 실행")
     pdf.code_block("""# 기본 실행
-python -m pytest tests/test_01.py -v --platform=android --alluredir=allure-results
+python -m pytest tests/android/gme1_test.py -v --platform=android --alluredir=allure-results
 
 # 실패한 테스트만 재실행
-python -m pytest tests/test_01.py -v --platform=android --alluredir=allure-results --lf
+python -m pytest tests/android/gme1_test.py -v --platform=android --alluredir=allure-results --lf
 
 # 특정 마커가 있는 테스트만 실행
 python -m pytest tests/ -v --platform=android --alluredir=allure-results -m "smoke"

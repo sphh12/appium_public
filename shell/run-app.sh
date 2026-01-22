@@ -6,6 +6,7 @@
 # Options:
 #   --platform    : android or ios (default: android)
 #   --test        : specific test to run (e.g., test_Login)
+#   --files       : space-separated test paths to run in order (quote the value)
 #   --all         : run all tests
 #   --report      : open allure report after test
 #   --generate    : generate allure html report (without server)
@@ -14,6 +15,7 @@
 
 PLATFORM="android"
 TEST_NAME=""
+TEST_FILES=""
 OPEN_REPORT=false
 RUN_ALL=false
 GENERATE_REPORT=false
@@ -39,6 +41,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --test)
             TEST_NAME="$2"
+            shift 2
+            ;;
+        --files)
+            TEST_FILES="$2"
             shift 2
             ;;
         --all)
@@ -67,6 +73,8 @@ while [[ $# -gt 0 ]]; do
             echo "Options:"
             echo "  --platform <android|ios>  Set test platform (default: android)"
             echo "  --test <test_name>        Run specific test (e.g., test_Login)"
+            echo "  --files \"<paths...>\"     Run specific test files in given order"
+            echo "  --<file>                  Shorthand for tests/<platform>/<file>.py (e.g., --xml_test or --gme1_test)"
             echo "  --all                     Run all tests"
             echo "  --report                  Open allure report after test (requires server)"
             echo "  --generate                Generate HTML report to allure-report folder"
@@ -76,11 +84,40 @@ while [[ $# -gt 0 ]]; do
             echo ""
             echo "Examples:"
             echo "  ./shell/run-app.sh --test test_Login"
+            echo "  ./shell/run-app.sh --files \"tests/android/gme1_test.py tests/android/xml_test.py\"";
+            echo "  ./shell/run-app.sh --xml_test"
+            echo "  ./shell/run-app.sh --gme1_test --test test_Login"
             echo "  ./shell/run-app.sh --all --report"
             echo "  ./shell/run-app.sh --test test_Login --generate"
             exit 0
             ;;
         *)
+            # Shorthand: treat unknown --<name> as tests/<platform>/<name>.py if it exists.
+            if [[ "$1" == --* ]]; then
+                SHORT_NAME="${1#--}"
+                if [[ -n "$SHORT_NAME" ]]; then
+                    # Aliases for renamed files (keep backward compatibility)
+                    if [[ "$SHORT_NAME" == "test_xml" || "$SHORT_NAME" == "test_xml.py" ]]; then
+                        SHORT_NAME="xml_test"
+                    fi
+
+                    CANDIDATE="$SHORT_NAME"
+                    if [[ "$CANDIDATE" != *.py ]]; then
+                        CANDIDATE="$CANDIDATE.py"
+                    fi
+                    CANDIDATE_PATH="tests/$PLATFORM/$CANDIDATE"
+                    if [[ -f "$CANDIDATE_PATH" ]]; then
+                        if [[ -z "$TEST_FILES" ]]; then
+                            TEST_FILES="$CANDIDATE_PATH"
+                        else
+                            TEST_FILES="$TEST_FILES $CANDIDATE_PATH"
+                        fi
+                        shift
+                        continue
+                    fi
+                fi
+            fi
+
             echo -e "${RED}Unknown option: $1${NC}"
             echo "Use --help for usage information"
             exit 1
@@ -350,14 +387,32 @@ if [[ -f "$LATEST_FILE" ]]; then
 fi
 
 # Build pytest command
-CMD="python -m pytest tests/android/test_01.py -v --platform=$PLATFORM --alluredir=$RESULTS_DIR --record-video"
+DEFAULT_TARGET="tests/android/gme1_test.py"
+if [[ "$PLATFORM" == "ios" ]]; then
+    DEFAULT_TARGET="tests/ios"
+fi
+
+TARGET="$DEFAULT_TARGET"
+if [[ "$RUN_ALL" == true ]]; then
+    TARGET="tests/$PLATFORM"
+fi
+if [[ -n "$TEST_FILES" ]]; then
+    TARGET="$TEST_FILES"
+fi
+
+CMD="python -m pytest $TARGET -v --platform=$PLATFORM --alluredir=$RESULTS_DIR --record-video"
 
 if [[ "$RUN_ALL" == false && -n "$TEST_NAME" ]]; then
     CMD="$CMD -k $TEST_NAME"
 fi
 
 echo "  Platform: $PLATFORM"
-echo "  Test:     ${TEST_NAME:-all}"
+if [[ -n "$TEST_FILES" ]]; then
+    echo "  Files:    $TEST_FILES"
+else
+    echo "  Target:   $TARGET"
+fi
+echo "  Filter:   ${TEST_NAME:-none}"
 echo "  Results:  $RESULTS_DIR"
 echo ""
 echo "----------------------------------------"

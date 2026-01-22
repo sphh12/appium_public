@@ -13,6 +13,8 @@ from appium.webdriver.common.appiumby import AppiumBy
 
 from config.capabilities import ANDROID_CAPS, IOS_CAPS, get_appium_server_url
 
+from utils.initial_screens import handle_initial_screens
+
 try:
     import allure  # type: ignore
 except Exception:  # pragma: no cover
@@ -229,6 +231,10 @@ def driver(request, platform):
     if platform == "android":
         _dismiss_system_ui_dialog(driver)
 
+        # noReset=False 등으로 최초 실행 화면이 뜰 수 있으므로 공통 처리
+        if request.node.get_closest_marker("skip_initial_screens") is None:
+            handle_initial_screens(driver)
+
     if request.config.getoption("--record-video"):
         try:
             driver.start_recording_screen()
@@ -265,6 +271,10 @@ def android_driver(request):
 
     # System UI 팝업 처리 (에뮬레이터 부팅 직후 발생 가능)
     _dismiss_system_ui_dialog(driver)
+
+    # noReset=False 등으로 최초 실행 화면이 뜰 수 있으므로 공통 처리
+    if request.node.get_closest_marker("skip_initial_screens") is None:
+        handle_initial_screens(driver)
 
     if request.config.getoption("--record-video"):
         try:

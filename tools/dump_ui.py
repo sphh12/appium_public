@@ -12,6 +12,7 @@ UI 요소 덤프 스크립트
 
 import os
 import sys
+import shutil
 from datetime import datetime
 from appium import webdriver
 from appium.options.android import UiAutomator2Options
@@ -21,6 +22,37 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
 
 from config.capabilities import ANDROID_CAPS, get_appium_server_url
+
+
+def _ensure_unique_dir(path: str) -> str:
+    """Return a directory path that does not exist by appending _N suffix."""
+    if not os.path.exists(path):
+        return path
+    idx = 1
+    while True:
+        candidate = f"{path}_{idx}"
+        if not os.path.exists(candidate):
+            return candidate
+        idx += 1
+
+
+def _finalize_session_dir(session_tmp_dir: str, output_root: str) -> str | None:
+    """Rename/move the session temp directory into output_root/<end_timestamp>."""
+    if not session_tmp_dir or not os.path.isdir(session_tmp_dir):
+        return None
+
+    end_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    final_dir = _ensure_unique_dir(os.path.join(output_root, end_timestamp))
+
+    try:
+        os.rename(session_tmp_dir, final_dir)
+    except Exception:
+        try:
+            shutil.move(session_tmp_dir, final_dir)
+        except Exception:
+            return session_tmp_dir
+
+    return final_dir
 
 
 def dump_ui(name: str = None):
@@ -117,20 +149,29 @@ def list_dumps():
         print("저장된 덤프 파일이 없습니다.")
         return
 
-    files = sorted([f for f in os.listdir(output_dir) if f.endswith(".xml")])
+    entries = sorted(os.listdir(output_dir))
+    xml_files = [e for e in entries if e.endswith(".xml") and os.path.isfile(os.path.join(output_dir, e))]
+    session_dirs = [e for e in entries if os.path.isdir(os.path.join(output_dir, e))]
 
-    if not files:
+    if not xml_files and not session_dirs:
         print("저장된 덤프 파일이 없습니다.")
         return
 
-    print("저장된 UI 덤프 파일:")
+    print("저장된 UI 덤프 파일/세션:")
     print("-" * 50)
-    for f in files:
+
+    for f in xml_files:
         filepath = os.path.join(output_dir, f)
         size = os.path.getsize(filepath)
-        print(f"  {f} ({size:,} bytes)")
+        print(f"  [file] {f} ({size:,} bytes)")
+
+    for d in session_dirs:
+        dirpath = os.path.join(output_dir, d)
+        xml_count = len([x for x in os.listdir(dirpath) if x.endswith(".xml")])
+        print(f"  [dir ] {d}/ ({xml_count} xml)")
+
     print("-" * 50)
-    print(f"총 {len(files)}개 파일")
+    print(f"총 파일 {len(xml_files)}개, 세션 폴더 {len(session_dirs)}개")
 
 
 def interactive_mode():
@@ -159,7 +200,7 @@ def interactive_mode():
         options.set_capability(key, value)
 
     print(f"Appium 서버 연결 중... ({get_appium_server_url()})")
-
+    driver = None
     try:
         driver = webdriver.Remote(
             command_executor=get_appium_server_url(),
@@ -174,6 +215,12 @@ def interactive_mode():
         print("  1. Appium 서버가 실행 중인지 확인 (npx appium)")
         print("  2. 에뮬레이터/디바이스가 연결되어 있는지 확인 (adb devices)")
         return
+
+    # 세션 임시 폴더(종료 시점에 폴더명을 종료시간으로 확정)
+    session_start = datetime.now().strftime("%Y%m%d_%H%M%S")
+    session_tmp_dir = os.path.join(output_dir, f"_running_{session_start}")
+    session_tmp_dir = _ensure_unique_dir(session_tmp_dir)
+    os.makedirs(session_tmp_dir, exist_ok=True)
 
     capture_count = 0
     print("-" * 50)
@@ -192,7 +239,7 @@ def interactive_mode():
             capture_count += 1
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"{timestamp}_{capture_count:03d}.xml"
-            filepath = os.path.join(output_dir, filename)
+            filepath = os.path.join(session_tmp_dir, filename)
 
             try:
                 page_source = driver.page_source
@@ -215,11 +262,18 @@ def interactive_mode():
     except KeyboardInterrupt:
         print("\n\n강제 종료됨.")
     finally:
-        driver.quit()
+        if driver is not None:
+            driver.quit()
+
+        final_dir = _finalize_session_dir(session_tmp_dir, output_dir)
         print()
         print("=" * 50)
         print(f"  총 {capture_count}개 화면 캡처 완료")
-        print(f"  저장 위치: {output_dir}")
+        if final_dir:
+            print(f"  저장 위치: {final_dir}")
+        else:
+            print(f"  저장 위치: {session_tmp_dir}")
+        print(f"  폴더명은 종료시간(YYYYMMDD_HHMMSS) 기준입니다")
         print("=" * 50)
 
 

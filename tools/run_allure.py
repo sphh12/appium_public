@@ -65,7 +65,7 @@ def main() -> int:
     parser.add_argument(
         "pytest_args",
         nargs=argparse.REMAINDER,
-        help="pytest 인자들 (예: -- tests/test_01.py -v --platform=android)",
+        help="pytest 인자들 (예: -- tests/android/gme1_test.py -v --platform=android)",
     )
 
     args = parser.parse_args()
@@ -74,7 +74,9 @@ def main() -> int:
     if pytest_args and pytest_args[0] == "--":
         pytest_args = pytest_args[1:]
     if not pytest_args:
-        print("pytest 인자가 없습니다. 예: python tools/run_allure.py -- tests/test_01.py -v --platform=android")
+        print(
+            "pytest 인자가 없습니다. 예: python tools/run_allure.py -- tests/android/gme1_test.py -v --platform=android"
+        )
         return 2
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")

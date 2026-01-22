@@ -133,37 +133,49 @@ class TestXmlScenario:
         - languageRv (RecyclerView)가 있으면 언어 선택 화면
         - English를 선택
         """
+        language_rv_id = f"{self.PACKAGE_ID}/languageRv"
         try:
-            # 언어 선택 화면 확인 (languageRv 또는 selectedLanguageText)
-            driver.find_element(
-                by=AppiumBy.ID,
-                value=f"{self.PACKAGE_ID}/languageRv"
-            )
-
-            # English 선택 (첫 번째 언어 항목 또는 text="English")
-            try:
-                english_item = driver.find_element(
-                    by=AppiumBy.ANDROID_UIAUTOMATOR,
-                    value='new UiSelector().text("English")'
-                )
-                english_item.click()
-                allure.attach(
-                    "언어 선택 화면에서 English 선택",
-                    name="language_selection",
-                    attachment_type=allure.attachment_type.TEXT
-                )
-                return True
-            except NoSuchElementException:
-                # English를 못 찾으면 첫 번째 항목 클릭
-                first_language = driver.find_element(
-                    by=AppiumBy.ID,
-                    value=f"{self.PACKAGE_ID}/countryLanguageText"
-                )
-                first_language.click()
-                return True
-
+            driver.find_element(by=AppiumBy.ID, value=language_rv_id)
         except NoSuchElementException:
             return False
+
+        # 003.xml에서 실제 클릭 가능한 것은 언어 항목의 부모 ViewGroup(clickable=true)
+        try:
+            english_row = driver.find_element(
+                by=AppiumBy.XPATH,
+                value=(
+                    f'//*[@resource-id="{language_rv_id}"]'
+                    '//*[@text="English"]/..'
+                ),
+            )
+            english_row.click()
+            allure.attach(
+                "언어 선택 화면에서 English 선택",
+                name="language_selection",
+                attachment_type=allure.attachment_type.TEXT,
+            )
+            return True
+        except NoSuchElementException:
+            pass
+
+        # English를 못 찾으면 첫 번째 클릭 가능한 항목 선택
+        try:
+            rows = driver.find_elements(
+                by=AppiumBy.XPATH,
+                value=f'//*[@resource-id="{language_rv_id}"]/android.view.ViewGroup',
+            )
+            if rows:
+                rows[0].click()
+                allure.attach(
+                    "언어 선택 화면에서 첫 번째 언어 항목 선택 (fallback)",
+                    name="language_selection_fallback",
+                    attachment_type=allure.attachment_type.TEXT,
+                )
+                return True
+        except Exception:
+            pass
+
+        return False
 
     def _handle_terms_and_conditions(self, driver):
         """
@@ -172,77 +184,86 @@ class TestXmlScenario:
         - agreeAllContainer 클릭하여 전체 동의
         - 스크롤 후 다음 버튼 클릭 (있으면)
         """
+        screen_title_id = f"{self.PACKAGE_ID}/screenTitle"
         try:
-            # 약관 화면 확인 (screenTitle 또는 agreeAllContainer)
-            screen_title = driver.find_element(
+            screen_title = driver.find_element(by=AppiumBy.ID, value=screen_title_id)
+        except NoSuchElementException:
+            return False
+
+        if "Terms" not in (screen_title.text or ""):
+            return False
+
+        did_action = False
+
+        # 전체 동의 클릭 (004.xml: agreeAllContainer clickable=true)
+        try:
+            agree_all = driver.find_element(
                 by=AppiumBy.ID,
-                value=f"{self.PACKAGE_ID}/screenTitle"
+                value=f"{self.PACKAGE_ID}/agreeAllContainer",
             )
+            agree_all.click()
+            did_action = True
+            time.sleep(0.5)
+            allure.attach(
+                "약관 화면에서 전체 동의 클릭",
+                name="terms_agree_all",
+                attachment_type=allure.attachment_type.TEXT,
+            )
+        except NoSuchElementException:
+            pass
 
-            if "Terms" not in screen_title.text:
-                return False
-
-            # 전체 동의 클릭
+        # 버튼이 화면 밖에 있을 수 있으니 ScrollView 끝까지 내린 뒤 한 번 더 탐색
+        try:
+            driver.find_element(
+                by=AppiumBy.ANDROID_UIAUTOMATOR,
+                value=(
+                    'new UiScrollable(new UiSelector().resourceId('
+                    f'"{self.PACKAGE_ID}/scrollView"'
+                    ')).scrollToEnd(5)'
+                ),
+            )
+        except Exception:
+            # UiScrollable이 실패하는 기기/상황을 대비한 좌표 스와이프 fallback
             try:
-                agree_all = driver.find_element(
-                    by=AppiumBy.ID,
-                    value=f"{self.PACKAGE_ID}/agreeAllContainer"
-                )
-                agree_all.click()
-                time.sleep(1)
-                allure.attach(
-                    "약관 화면에서 전체 동의 클릭",
-                    name="terms_agree_all",
-                    attachment_type=allure.attachment_type.TEXT
-                )
-            except NoSuchElementException:
-                pass
-
-            # 화면 스크롤 (다음 버튼이 아래에 있을 수 있음)
-            try:
-                driver.swipe(540, 1800, 540, 800, 500)
-                time.sleep(1)
+                driver.swipe(540, 1900, 540, 700, 600)
             except Exception:
                 pass
 
-            # 다음/확인 버튼 찾기 (여러 가능한 ID 시도)
-            next_button_ids = ["btnNext", "btn_next", "btnConfirm", "btn_confirm", "btnSubmit"]
-            for btn_id in next_button_ids:
-                try:
-                    next_btn = driver.find_element(
-                        by=AppiumBy.ID,
-                        value=f"{self.PACKAGE_ID}/{btn_id}"
-                    )
-                    next_btn.click()
-                    return True
-                except NoSuchElementException:
-                    continue
-
-            # 버튼을 못 찾으면 텍스트로 시도
+        # 다음/확인 계열 버튼 탐색 (ID 후보 + 텍스트 후보)
+        next_button_ids = ["btnNext", "btn_next", "btnConfirm", "btn_confirm", "btnSubmit", "btnContinue", "btn_done"]
+        for btn_id in next_button_ids:
             try:
-                next_btn = driver.find_element(
-                    by=AppiumBy.ANDROID_UIAUTOMATOR,
-                    value='new UiSelector().textContains("Next").clickable(true)'
-                )
+                next_btn = driver.find_element(by=AppiumBy.ID, value=f"{self.PACKAGE_ID}/{btn_id}")
                 next_btn.click()
+                allure.attach(
+                    f"약관 화면에서 다음 버튼 클릭: {btn_id}",
+                    name="terms_next_by_id",
+                    attachment_type=allure.attachment_type.TEXT,
+                )
                 return True
             except NoSuchElementException:
-                pass
+                continue
 
-            try:
-                next_btn = driver.find_element(
-                    by=AppiumBy.ANDROID_UIAUTOMATOR,
-                    value='new UiSelector().textContains("Confirm").clickable(true)'
-                )
-                next_btn.click()
-                return True
-            except NoSuchElementException:
-                pass
-
-            return True  # 전체 동의는 클릭했으므로 True
-
+        try:
+            next_btn = driver.find_element(
+                by=AppiumBy.ANDROID_UIAUTOMATOR,
+                value=(
+                    'new UiSelector().clickable(true).textMatches('
+                    '"(?i)(next|confirm|continue|done|ok|agree)"'
+                    ')'
+                ),
+            )
+            next_btn.click()
+            allure.attach(
+                "약관 화면에서 다음 버튼 클릭 (textMatches)",
+                name="terms_next_by_text",
+                attachment_type=allure.attachment_type.TEXT,
+            )
+            return True
         except NoSuchElementException:
-            return False
+            pass
+
+        return did_action
 
     def find_element_with_fallback(self, driver, element_info, timeout=5):
         """
