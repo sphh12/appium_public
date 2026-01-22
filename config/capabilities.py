@@ -23,6 +23,7 @@ ANDROID_CAPS = {
     "fullReset": False,
     "newCommandTimeout": 300,
     "autoGrantPermissions": True,
+    "adbExecTimeout": 60000,  # ADB 명령 타임아웃 60초 (기본 20초)
 }
 
 if ANDROID_PLATFORM_VERSION:

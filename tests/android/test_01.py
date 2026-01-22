@@ -9,10 +9,10 @@ from selenium.webdriver.support import expected_conditions as EC
 
 class TestAndroidSample:
 
-    @allure.feature("설정")
-    @allure.story("언어 변경")
+    @allure.feature("설정")             # 1 Depth
+    @allure.story("언어 변경")          # 2 Depth
     @allure.severity(allure.severity_level.NORMAL)
-    @allure.title("언어 설정 변경")
+    @allure.title("언어 설정 변경")     # 3 Depth
     @allure.description("앱 내 언어 선택 UI를 통해 언어를 변경한다")
     def test_Languague_settings(self, android_driver):
 
@@ -36,10 +36,13 @@ class TestAndroidSample:
             # 뒤로가기 버튼으로 화면 닫기 (더 안정적)
             android_driver.back()
 
-    @allure.feature("인증")
-    @allure.story("정상 로그인")
+
+
+
+    @allure.feature("인증")                    # 1 Depth
+    @allure.story("정상 로그인")               # 2 Depth
     @allure.severity(allure.severity_level.CRITICAL)
-    @allure.title("유효한 계정으로 로그인")
+    @allure.title("유효한 계정으로 로그인")    # 3 Depth
     @allure.description("아이디/비밀번호 입력 후 로그인 버튼을 눌러 로그인 시도를 수행한다")
     def test_Login(self, android_driver):
 
@@ -72,26 +75,16 @@ class TestAndroidSample:
                 )
                 btn.click()
 
-            # COMPLETE 버튼 클릭
+            # COMPLETE 버튼 클릭 (로그인 시도됨)
             complete_btn = android_driver.find_element(
                 by=AppiumBy.ACCESSIBILITY_ID,
                 value="입력완료"
             )
             complete_btn.click()
 
-        with allure.step("키보드 닫기(빈곳 클릭)"):
-            e20 = android_driver.find_element(
-                by=AppiumBy.ID,
-                value="com.gmeremit.online.gmeremittance_native.stag:id/toolbarLayout",
-            )
-            e20.click()
-
-        with allure.step("로그인 시도"):
-            el9 = android_driver.find_element(
-                by=AppiumBy.ID,
-                value="com.gmeremit.online.gmeremittance_native.stag:id/btn_submit",
-            )
-            el9.click()
+        with allure.step("로그인 완료 대기"):
+            # 화면 전환 대기
+            time.sleep(2)
 
     @allure.feature("인증")
     @allure.story("유효성 검증")
