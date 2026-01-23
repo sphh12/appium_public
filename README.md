@@ -15,6 +15,10 @@ GME Remittance 앱 자동화 테스트 프로젝트
 
 ## 새 환경에서 설정하기 (처음 사용자용)
 
+처음 클론/초기 세팅만 빠르게 보고 싶으면 아래 문서를 참고하세요.
+
+- [docs/README_CLONE.md](docs/README_CLONE.md)
+
 다른 PC에서 이 프로젝트를 처음 설정할 때 아래 단계를 순서대로 진행하세요.
 
 ### STEP 1: 필수 프로그램 설치
@@ -224,6 +228,10 @@ npm run test:ios  # Mac only
 
 ## Allure 리포트
 
+Allure 화면 구성/탭 의미/분석 루틴(상세)은 아래 문서를 참고하세요.
+
+- [docs/ALLURE_REPORT_GUIDE.md](docs/ALLURE_REPORT_GUIDE.md)
+
 ### Allure CLI 설치 (최초 1회)
 ```bash
 # Windows (Scoop 사용)
@@ -245,6 +253,39 @@ allure serve allure-results
 allure generate allure-results -o allure-report --clean
 allure open allure-report
 ```
+
+### UI 확인 방법(아주 간단 버전)
+
+- **Overview**: 이번 실행의 전체 건강상태(FAILED/BROKEN/SKIPPED 비율)
+- **Suites**: 실패한 테스트를 클릭해서 상세 진입(가장 자주 씀)
+- **Attachments**: 스크린샷/비디오/log/page source로 원인 단서 확인
+
+### (권장) 실행 이력 저장 + 대시보드
+
+이 프로젝트는 실행 이력을 `allure-reports/YYYYMMDD_HHMMSS/` 형태로 보관하며,
+전체 실행 목록을 한 화면에서 볼 수 있는 대시보드를 함께 제공합니다.
+
+1) **타임스탬프 기반 실행 + 리포트 생성**
+```bash
+# 기본(권장): hybrid = FAIL/SKIP/BROKEN만 첨부
+python tools/run_allure.py -- tests/android/gme1_test.py -v --platform=android --record-video
+
+# 필요 시: all = 성공(PASS)까지 포함해 전부 첨부
+python tools/run_allure.py -- tests/android/gme1_test.py -v --platform=android --record-video --allure-attach=all
+```
+
+2) **최신 리포트 바로 열기**
+- `allure-reports/LATEST/index.html` (최신 실행으로 리다이렉트)
+
+3) **전체 이력 대시보드 열기**
+- `allure-reports/dashboard/index.html`
+
+대시보드는 브라우저에서 `runs.json`을 읽기 때문에, 아래처럼 간단 서버로 여는 것을 권장합니다.
+```bash
+python -m http.server 8000
+```
+그 후 브라우저에서 아래로 접속:
+- `http://127.0.0.1:8000/allure-reports/dashboard/`
 
 ---
 

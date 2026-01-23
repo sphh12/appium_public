@@ -6,6 +6,8 @@ from appium.webdriver.common.appiumby import AppiumBy
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
+from utils.auth import login, navigate_to_login_screen
+
 
 class TestAndroidSample:
 
@@ -45,46 +47,7 @@ class TestAndroidSample:
     @allure.title("유효한 계정으로 로그인")    # 3 Depth
     @allure.description("아이디/비밀번호 입력 후 로그인 버튼을 눌러 로그인 시도를 수행한다")
     def test_Login(self, android_driver):
-
-        with allure.step("로그인 화면 진입"):
-            el6 = android_driver.find_element(
-                by=AppiumBy.ID,
-                value="com.gmeremit.online.gmeremittance_native.stag:id/btn_lgn",
-            )
-            el6.click()
-
-        with allure.step("아이디 입력"):
-            el7 = android_driver.find_element(
-                by=AppiumBy.ID,
-                value="com.gmeremit.online.gmeremittance_native.stag:id/usernameId",
-            )
-            el7.send_keys("gme_qualitytest44")
-
-        with allure.step("비밀번호 입력"):
-            el8 = android_driver.find_element(
-                by=AppiumBy.ID,
-                value="com.gmeremit.online.gmeremittance_native.stag:id/securityKeyboardEditText",
-            )
-            el8.click()  # 키보드 활성화
-
-            # 보안 키보드에서 각 숫자 버튼 클릭 (content-desc로 찾기)
-            for digit in "123456":
-                btn = android_driver.find_element(
-                    by=AppiumBy.ACCESSIBILITY_ID,
-                    value=digit
-                )
-                btn.click()
-
-            # COMPLETE 버튼 클릭 (로그인 시도됨)
-            complete_btn = android_driver.find_element(
-                by=AppiumBy.ACCESSIBILITY_ID,
-                value="입력완료"
-            )
-            complete_btn.click()
-
-        with allure.step("로그인 완료 대기"):
-            # 화면 전환 대기
-            time.sleep(2)
+        login(android_driver)
 
     @allure.feature("인증")
     @allure.story("유효성 검증")
@@ -95,11 +58,7 @@ class TestAndroidSample:
         """비밀번호 미입력 시 에러 메시지 확인"""
 
         with allure.step("로그인 화면 진입"):
-            login_btn = android_driver.find_element(
-                by=AppiumBy.ID,
-                value="com.gmeremit.online.gmeremittance_native.stag:id/btn_lgn",
-            )
-            login_btn.click()
+            navigate_to_login_screen(android_driver)
 
         with allure.step("아이디만 입력"):
             username = android_driver.find_element(

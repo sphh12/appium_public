@@ -400,7 +400,7 @@ if [[ -n "$TEST_FILES" ]]; then
     TARGET="$TEST_FILES"
 fi
 
-CMD="python -m pytest $TARGET -v --platform=$PLATFORM --alluredir=$RESULTS_DIR --record-video"
+CMD="python -m pytest $TARGET -v --platform=$PLATFORM --alluredir=$RESULTS_DIR --record-video --allure-attach=hybrid"
 
 if [[ "$RUN_ALL" == false && -n "$TEST_NAME" ]]; then
     CMD="$CMD -k $TEST_NAME"
@@ -431,6 +431,46 @@ echo ""
 echo "[STEP 4] Generating Allure HTML report..."
 if $ALLURE_CMD generate "$RESULTS_DIR" -o "$REPORT_DIR" --clean; then
     echo -e "${GREEN}[OK] Report generated: $REPORT_DIR${NC}"
+
+        # Inject custom CSS to reduce oversized attachment previews (screenshots/videos)
+        # without shrinking the whole page text.
+        cat > "$REPORT_DIR/custom.css" <<'EOF'
+/* Custom Allure overrides (project-local)
+     Goal: reduce attachment media preview size without shrinking text.
+*/
+
+.attachment__media-container:not(.attachment__media-container_fullscreen) .attachment__media,
+.attachment__media-container:not(.attachment__media-container_fullscreen) .attachment__embed {
+    max-height: min(42vh, 460px);
+    width: auto;
+    height: auto;
+}
+
+.attachment__media-container:not(.attachment__media-container_fullscreen) video.attachment__media {
+    max-height: min(42vh, 460px);
+    width: 100%;
+}
+
+.attachment__media-container:not(.attachment__media-container_fullscreen) {
+    padding: 8px 16px;
+}
+
+.attachment__iframe-container:not(.attachment__iframe-container_fullscreen) {
+    max-height: min(60vh, 520px);
+    overflow: auto;
+}
+
+.attachment__filename {
+    padding: 10px 16px;
+}
+EOF
+
+        if [[ -f "$REPORT_DIR/index.html" ]]; then
+                if ! grep -q 'href="custom.css"' "$REPORT_DIR/index.html"; then
+                        # Insert after styles.css link (best-effort)
+                        sed -i 's|<link rel="stylesheet" type="text/css" href="styles.css">|<link rel="stylesheet" type="text/css" href="styles.css">\n    <link rel="stylesheet" type="text/css" href="custom.css">|' "$REPORT_DIR/index.html" 2>/dev/null || true
+                fi
+        fi
 else
     echo -e "${RED}[FAIL] Report generation failed. Is Allure installed?${NC}"
 fi
@@ -438,6 +478,26 @@ fi
 # Update LATEST.txt for next run's history
 mkdir -p "allure-reports"
 echo "$TIMESTAMP" > "$LATEST_FILE"
+
+# Create/update a stable LATEST entry (no symlinks; works on Windows too)
+mkdir -p "allure-reports/LATEST"
+cat > "allure-reports/LATEST/index.html" <<EOF
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta http-equiv="refresh" content="0; url=../$TIMESTAMP/index.html" />
+        <title>Allure Report - LATEST</title>
+    </head>
+    <body>
+        <p>Redirecting to latest report: <a href="../$TIMESTAMP/index.html">$TIMESTAMP</a></p>
+    </body>
+</html>
+EOF
+echo "$TIMESTAMP" > "allure-reports/LATEST/LATEST_TIMESTAMP.txt"
+
+# Generate/update history dashboard (static HTML + runs.json)
+python tools/update_dashboard.py --reports-root allure-reports >/dev/null 2>&1 || true
 
 echo ""
 
@@ -461,6 +521,7 @@ echo "========================================"
 echo ""
 echo "Results: $RESULTS_DIR"
 echo "Report:  $REPORT_DIR"
+echo "Dash:    allure-reports/dashboard/index.html"
 echo ""
 echo "To view the report:"
 echo "  allure open $REPORT_DIR"

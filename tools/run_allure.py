@@ -27,6 +27,99 @@ def _copy_history(previous_report_dir: Path, results_dir: Path) -> None:
     shutil.copytree(src, dst)
 
 
+def _write_latest_entry(reports_root: Path, timestamp: str) -> None:
+        """Create/update a stable 'LATEST' folder that redirects to the latest report.
+
+        This avoids relying on Explorer/VS Code sort order and does not require symlinks.
+        """
+
+        latest_dir = reports_root / "LATEST"
+        latest_dir.mkdir(parents=True, exist_ok=True)
+
+        # Use forward slashes for browser compatibility.
+        target = f"../{timestamp}/index.html"
+        html = f"""<!doctype html>
+<html lang=\"en\">
+    <head>
+        <meta charset=\"utf-8\" />
+        <meta http-equiv=\"refresh\" content=\"0; url={target}\" />
+        <title>Allure Report - LATEST</title>
+    </head>
+    <body>
+        <p>Redirecting to latest report: <a href=\"{target}\">{timestamp}</a></p>
+    </body>
+</html>
+"""
+        (latest_dir / "index.html").write_text(html, encoding="utf-8")
+        (latest_dir / "LATEST_TIMESTAMP.txt").write_text(f"{timestamp}\n", encoding="utf-8")
+
+
+def _inject_custom_css(report_dir: Path) -> None:
+        """Inject custom CSS into a generated Allure report.
+
+        Purpose: keep text readable while reducing oversized screenshot/video previews.
+        """
+
+        index_file = report_dir / "index.html"
+        if not index_file.exists():
+                return
+
+        css_name = "custom.css"
+        css_file = report_dir / css_name
+
+        css = """/* Custom Allure overrides (project-local)
+     Goal: reduce attachment media preview size without shrinking text.
+*/
+
+/* Limit media preview height in the test details view */
+.attachment__media-container:not(.attachment__media-container_fullscreen) .attachment__media,
+.attachment__media-container:not(.attachment__media-container_fullscreen) .attachment__embed {
+    max-height: min(42vh, 460px);
+    width: auto;
+    height: auto;
+}
+
+/* Videos sometimes use the same class; ensure it fits nicely */
+.attachment__media-container:not(.attachment__media-container_fullscreen) video.attachment__media {
+    max-height: min(42vh, 460px);
+    width: 100%;
+}
+
+/* Keep the container from taking too much vertical space */
+.attachment__media-container:not(.attachment__media-container_fullscreen) {
+    padding: 8px 16px;
+}
+
+/* If an iframe attachment exists, constrain it too */
+.attachment__iframe-container:not(.attachment__iframe-container_fullscreen) {
+    max-height: min(60vh, 520px);
+    overflow: auto;
+}
+
+/* Make attachment filename/header a bit tighter */
+.attachment__filename {
+    padding: 10px 16px;
+}
+"""
+
+        css_file.write_text(css, encoding="utf-8")
+
+        html = index_file.read_text(encoding="utf-8", errors="replace")
+        link_tag = f'<link rel="stylesheet" type="text/css" href="{css_name}">' 
+        if css_name in html:
+                return
+
+        # Insert after the main styles.css link (best-effort)
+        marker = '<link rel="stylesheet" type="text/css" href="styles.css">'
+        if marker in html:
+                html = html.replace(marker, marker + "\n    " + link_tag, 1)
+        else:
+                # Fallback: before </head>
+                html = html.replace("</head>", f"    {link_tag}\n</head>")
+
+        index_file.write_text(html, encoding="utf-8")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
@@ -79,6 +172,9 @@ def main() -> int:
         )
         return 2
 
+    # Default is handled in conftest.py: --allure-attach=hybrid
+    # Users can override with --allure-attach=all if they want to attach everything.
+
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     results_dir = Path(args.results_root) / timestamp
     report_dir = Path(args.reports_root) / timestamp
@@ -108,11 +204,27 @@ def main() -> int:
     print("[run_allure] allure generate:", " ".join(allure_generate_cmd))
     subprocess.run(allure_generate_cmd, env=env, check=True)
 
+    _inject_custom_css(report_dir)
+
     latest_file = Path(args.reports_root) / "LATEST.txt"
     latest_file.write_text(f"{timestamp}\n", encoding="utf-8")
 
+    _write_latest_entry(Path(args.reports_root), timestamp)
+
+    # Generate/update a simple dashboard that lists all saved runs.
+    # (Static HTML + runs.json; browser cannot list directories by itself.)
+    try:
+        dashboard_script = Path(__file__).resolve().parent / "update_dashboard.py"
+        dashboard_cmd = [sys.executable, str(dashboard_script), "--reports-root", str(args.reports_root)]
+        print("[run_allure] dashboard:", " ".join(dashboard_cmd))
+        subprocess.run(dashboard_cmd, env=env, check=False)
+    except Exception as e:
+        print(f"[run_allure] dashboard update skipped: {e}")
+
     print(f"[run_allure] results: {results_dir}")
     print(f"[run_allure] report  : {report_dir}")
+    print(f"[run_allure] latest  : {Path(args.reports_root) / 'LATEST' / 'index.html'}")
+    print(f"[run_allure] dash    : {Path(args.reports_root) / 'dashboard' / 'index.html'}")
 
     if args.open:
         allure_open_cmd = ["allure", "open", str(report_dir)]

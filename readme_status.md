@@ -19,8 +19,8 @@
   - `tests/android/test_xml.py` → `tests/android/xml_test.py`
   - 예시/스크립트/도구/패키지 스크립트 내 경로 참조 업데이트
 
-- `dump_ui` 산출물 정리 개선
-  - 인터랙티브 덤프(`python tools/dump_ui.py -i`) 시
+- `ui_dump` 산출물 정리 개선
+  - 인터랙티브 덤프(`python tools/ui_dump.py -i`) 시
     - 실행 시작~종료까지를 한 세션 폴더로 묶음
     - 종료 시점에 폴더명을 `YYYYMMDD_HHMMSS`(종료시간)로 확정
 
@@ -30,7 +30,7 @@
 
 ## 남은 작업(TODO)
 
-- (선택) `dump_ui.py`의 단발 캡처(`python tools/dump_ui.py <name>`)도 세션 폴더 방식으로 정리할지 결정
+- (선택) `ui_dump.py`의 단발 캡처(`python tools/ui_dump.py <name>`)도 세션 폴더 방식으로 정리할지 결정
 - Allure 리포트/가이드 문서(생성 PDF 포함) 최신 실행 예시 검수
 
 ## 빠른 실행 예시

@@ -1,7 +1,11 @@
 """pytest conftest - 테스트 픽스처 및 설정"""
 import base64
 from datetime import datetime
+import getpass
 import json
+import platform as _platform
+import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -36,6 +40,35 @@ def _safe_allure_attach(name: str, data: bytes, attachment_type):
         allure.attach(data, name=name, attachment_type=attachment_type)
     except Exception:
         return
+
+
+def _safe_run_git(args: list[str], cwd: Path) -> str:
+    try:
+        proc = subprocess.run(
+            ["git", *args],
+            cwd=str(cwd),
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        return (proc.stdout or "").strip()
+    except Exception:
+        return ""
+
+
+def _write_executor_json(results_path: Path, build_name: str) -> None:
+    executor = {
+        "name": getpass.getuser() or "local",
+        "type": "local",
+        "buildName": build_name,
+        "buildUrl": "",
+        "reportName": "appium-mobile-test",
+        "reportUrl": "",
+    }
+    (results_path / "executor.json").write_text(
+        json.dumps(executor, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
 
 
 def _dismiss_system_ui_dialog(driver, max_attempts=3, wait_after_dismiss=2):
@@ -90,21 +123,46 @@ def pytest_addoption(parser):
         "--record-video",
         action="store_true",
         default=False,
-        help="테스트 실패 시 화면녹화(mp4)를 Allure에 첨부"
+        help="테스트 화면녹화(mp4) 수행(실패/스킵/broken 시 Allure 첨부)"
+    )
+
+    parser.addoption(
+        "--allure-attach",
+        action="store",
+        default="hybrid",
+        choices=["hybrid", "all", "fail-skip"],
+        help=(
+            "Allure 첨부 정책: hybrid(기본, FAIL/SKIP/BROKEN만 첨부), "
+            "all(성공 포함 전체 첨부). fail-skip은 이전 값 호환용"
+        ),
     )
 
 
 def pytest_configure(config):
-    results_dir = config.getoption("allure_report_dir") or "allure-results"
+    try:
+        results_dir = config.getoption("allure_report_dir")
+    except Exception:
+        results_dir = None
+    results_dir = results_dir or "allure-results"
     results_path = Path(results_dir)
     results_path.mkdir(parents=True, exist_ok=True)
 
     platform_name = (config.getoption("platform") or "android").lower()
     app_path = config.getoption("app") or ""
     record_video = bool(config.getoption("record_video"))
+    allure_attach = str(config.getoption("allure_attach") or "hybrid")
+    if allure_attach == "fail-skip":
+        allure_attach = "hybrid"
 
     caps = ANDROID_CAPS if platform_name == "android" else IOS_CAPS
     effective_app = app_path or str(caps.get("app", ""))
+
+    repo_root = Path(getattr(config, "rootpath", Path.cwd()))
+    git_branch = _safe_run_git(["rev-parse", "--abbrev-ref", "HEAD"], cwd=repo_root)
+    git_commit = _safe_run_git(["rev-parse", "--short", "HEAD"], cwd=repo_root)
+    build_name = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}|{platform_name}" + (
+        f"|{git_branch}@{git_commit}" if (git_branch or git_commit) else ""
+    )
 
     env_lines = [
         f"platform={platform_name}",
@@ -114,11 +172,18 @@ def pytest_configure(config):
         f"app={effective_app}",
         f"appiumServer={get_appium_server_url()}",
         f"recordVideo={record_video}",
+        f"allureAttach={allure_attach}",
+        f"os={_platform.platform()}",
+        f"python={sys.version.split()[0]}",
+        f"gitBranch={git_branch}",
+        f"gitCommit={git_commit}",
     ]
     (results_path / "environment.properties").write_text(
         "\n".join(env_lines) + "\n",
         encoding="utf-8",
     )
+
+    _write_executor_json(results_path, build_name)
 
     categories = [
         {
@@ -153,44 +218,124 @@ def pytest_runtest_makereport(item, call):
     outcome = yield
     report = outcome.get_result()
 
-    if report.when != "call":
+    # 실패/스킵은 setup 단계에서도 발생할 수 있어 캡처 범위를 넓힘
+    if report.when not in ("setup", "call", "teardown"):
         return
 
     driver = _get_any_driver(item)
-    if not driver:
-        return
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    if report.failed:
-        try:
-            png = driver.get_screenshot_as_png()
-            _safe_allure_attach(
-                name=f"screenshot_{item.name}_{timestamp}",
-                data=png,
-                attachment_type=getattr(allure.attachment_type, "PNG", None),
-            )
-        except Exception:
-            pass
+    attach_mode = str(item.config.getoption("allure_attach") or "hybrid")
+    if attach_mode == "fail-skip":
+        attach_mode = "hybrid"
+    attach_all = attach_mode == "all"
 
-    if item.config.getoption("--record-video") and getattr(item, "_video_recording_started", False):
-        if not getattr(item, "_video_recording_stopped", False):
+    # 전체 단계(setup/call/teardown) 중 한 번이라도 실패/스킵이면 기록
+    if report.failed:
+        item._allure_any_failed = True
+    if report.skipped:
+        item._allure_any_skipped = True
+
+    # 스크린샷: hybrid는 FAIL/SKIP/BROKEN(대부분 setup/teardown 실패=report.failed)에만,
+    # all 모드에선 PASS도(call 단계에서) 첨부.
+    want_screenshot = (report.failed or report.skipped) or (attach_all and report.when == "call")
+
+    # 부가 진단(page source/caps/logcat): hybrid는 실패(=broken 포함)만, all 모드에선 PASS도(call 단계에서) 첨부.
+    want_diagnostics = report.failed or (attach_all and report.when == "call")
+
+    if want_screenshot and not getattr(item, "_allure_screen_attached", False):
+        if driver:
             try:
-                video_b64 = driver.stop_recording_screen()
-                video_bytes = base64.b64decode(video_b64)
-                status = "failed" if report.failed else "passed" if report.passed else report.outcome
-                _safe_allure_attach(
-                    name=f"video_{status}_{item.name}_{timestamp}",
-                    data=video_bytes,
-                    attachment_type=getattr(allure.attachment_type, "MP4", None),
+                png = driver.get_screenshot_as_png()
+                status = (
+                    "failed"
+                    if report.failed
+                    else "skipped"
+                    if report.skipped
+                    else "passed"
+                    if report.passed
+                    else report.outcome
                 )
-                item._video_recording_stopped = True
+                phase = report.when
+                _safe_allure_attach(
+                    name=f"screenshot_{status}_{phase}_{item.name}_{timestamp}.png",
+                    data=png,
+                    attachment_type=getattr(allure.attachment_type, "PNG", None),
+                )
+                item._allure_screen_attached = True
             except Exception:
                 pass
 
+    if want_diagnostics and driver:
+        try:
+            source = getattr(driver, "page_source", "")
+            if source:
+                _safe_allure_attach(
+                    name=f"page_source_{item.name}_{timestamp}.xml",
+                    data=source.encode("utf-8", errors="replace"),
+                    attachment_type=getattr(allure.attachment_type, "XML", None)
+                    or getattr(allure.attachment_type, "TEXT", None),
+                )
+        except Exception:
+            pass
+
+        try:
+            caps = getattr(driver, "capabilities", None)
+            if caps:
+                _safe_allure_attach(
+                    name=f"capabilities_{item.name}_{timestamp}.json",
+                    data=json.dumps(caps, ensure_ascii=False, indent=2).encode("utf-8"),
+                    attachment_type=getattr(allure.attachment_type, "JSON", None)
+                    or getattr(allure.attachment_type, "TEXT", None),
+                )
+        except Exception:
+            pass
+
+        try:
+            platform_name = (item.config.getoption("platform") or "android").lower()
+            if platform_name == "android":
+                logs = driver.get_log("logcat")
+                if logs:
+                    # 너무 커질 수 있어 최근 일부만 첨부
+                    tail = logs[-300:] if len(logs) > 300 else logs
+                    log_text = "\n".join(json.dumps(entry, ensure_ascii=False) for entry in tail)
+                    _safe_allure_attach(
+                        name=f"logcat_{item.name}_{timestamp}.txt",
+                        data=log_text.encode("utf-8", errors="replace"),
+                        attachment_type=getattr(allure.attachment_type, "TEXT", None),
+                    )
+        except Exception:
+            pass
+
+    # 비디오: fixture teardown에서 stop_recording_screen() 결과를 저장해두고,
+    # 여기서 상태에 따라 Allure에 첨부한다 (driver가 이미 quit 되어도 첨부 가능).
+    record_video = bool(item.config.getoption("record_video"))
+    video_bytes = getattr(item, "_recorded_video_bytes", None)
+    if record_video and video_bytes and not getattr(item, "_allure_video_attached", False):
+        if report.when == "teardown":
+            any_failed = bool(getattr(item, "_allure_any_failed", False))
+            any_skipped = bool(getattr(item, "_allure_any_skipped", False))
+            if attach_all or any_failed or any_skipped:
+                try:
+                    stop_ts = getattr(item, "_video_stop_timestamp", timestamp)
+                    status = "failed" if any_failed else "skipped" if any_skipped else "passed"
+                    _safe_allure_attach(
+                        name=f"video_{status}_teardown_{item.name}_{stop_ts}.mp4",
+                        data=video_bytes,
+                        attachment_type=getattr(allure.attachment_type, "MP4", None),
+                    )
+                    item._allure_video_attached = True
+                except Exception:
+                    pass
+
 
 def pytest_terminal_summary(terminalreporter, exitstatus, config):
-    results_dir = config.getoption("allure_report_dir") or "allure-results"
+    try:
+        results_dir = config.getoption("allure_report_dir")
+    except Exception:
+        results_dir = None
+    results_dir = results_dir or "allure-results"
     terminalreporter.write_sep("=", "Allure report")
     terminalreporter.write_line(f"Generate: allure generate {results_dir} -o allure-report --clean")
     terminalreporter.write_line(f"Serve   : allure serve {results_dir}")
@@ -247,7 +392,11 @@ def driver(request, platform):
     if request.config.getoption("--record-video") and getattr(request.node, "_video_recording_started", False):
         if not getattr(request.node, "_video_recording_stopped", False):
             try:
-                driver.stop_recording_screen()
+                video_b64 = driver.stop_recording_screen()
+                request.node._video_recording_stopped = True
+                request.node._video_stop_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                if video_b64:
+                    request.node._recorded_video_bytes = base64.b64decode(video_b64)
             except Exception:
                 pass
 
@@ -288,11 +437,28 @@ def android_driver(request):
     if request.config.getoption("--record-video") and getattr(request.node, "_video_recording_started", False):
         if not getattr(request.node, "_video_recording_stopped", False):
             try:
-                driver.stop_recording_screen()
+                video_b64 = driver.stop_recording_screen()
+                request.node._video_recording_stopped = True
+                request.node._video_stop_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                if video_b64:
+                    request.node._recorded_video_bytes = base64.b64decode(video_b64)
             except Exception:
                 pass
 
     driver.quit()
+
+
+@pytest.fixture(scope="function")
+def android_driver_logged_in(android_driver):
+    """로그인 완료된 Android 드라이버.
+
+    신규 테스트 작성 시 이 픽스처를 사용하면 로그인 모듈을 앞에 반복 작성하지 않아도 됩니다.
+    """
+
+    from utils.auth import login
+
+    login(android_driver)
+    return android_driver
 
 
 @pytest.fixture(scope="function")
@@ -322,7 +488,11 @@ def ios_driver(request):
     if request.config.getoption("--record-video") and getattr(request.node, "_video_recording_started", False):
         if not getattr(request.node, "_video_recording_stopped", False):
             try:
-                driver.stop_recording_screen()
+                video_b64 = driver.stop_recording_screen()
+                request.node._video_recording_stopped = True
+                request.node._video_stop_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                if video_b64:
+                    request.node._recorded_video_bytes = base64.b64decode(video_b64)
             except Exception:
                 pass
 
