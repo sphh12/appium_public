@@ -11,7 +11,7 @@ import time
 from contextlib import contextmanager
 
 from appium.webdriver.common.appiumby import AppiumBy  # type: ignore
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
@@ -152,3 +152,45 @@ def login(
 
     with _step("로그인 완료 대기"):
         time.sleep(post_login_sleep)
+
+    # 보이스피싱 경고 팝업 처리 (있을 경우에만)
+    _handle_voice_phishing_popup_if_present(driver, resource_id_prefix=resource_id_prefix)
+
+
+def _handle_voice_phishing_popup_if_present(
+    driver,
+    resource_id_prefix: str = DEFAULT_RESOURCE_ID_PREFIX,
+    timeout: float = 3,
+) -> bool:
+    """로그인 후 보이스피싱 경고 팝업이 있으면 처리합니다.
+    
+    Returns:
+        bool: 팝업을 처리했으면 True, 팝업이 없었으면 False
+    """
+    try:
+        # 체크박스가 있는지 짧은 timeout으로 확인
+        checkbox = WebDriverWait(driver, timeout).until(
+            EC.presence_of_element_located(
+                (AppiumBy.ID, _id(resource_id_prefix, "check_customer"))
+            )
+        )
+        
+        with _step("보이스피싱 경고 팝업 처리"):
+            # 체크박스 클릭
+            checkbox.click()
+            time.sleep(0.5)
+            
+            # OK 버튼 클릭 (체크박스 클릭 후 활성화됨)
+            ok_button = WebDriverWait(driver, timeout).until(
+                EC.element_to_be_clickable(
+                    (AppiumBy.XPATH, "//android.widget.Button[@text='OK']")
+                )
+            )
+            ok_button.click()
+            time.sleep(1)
+            
+        return True
+        
+    except (NoSuchElementException, TimeoutException):
+        # 팝업이 없으면 그냥 넘어감
+        return False

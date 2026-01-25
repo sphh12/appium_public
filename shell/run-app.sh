@@ -519,12 +519,16 @@ else
 fi
 echo "========================================"
 echo ""
-echo "Results: $RESULTS_DIR"
-echo "Report:  $REPORT_DIR"
-echo "Dash:    allure-reports/dashboard/index.html"
+echo "Results:   $RESULTS_DIR"
+echo "Report:    $REPORT_DIR"
+echo "Dashboard: allure-reports/dashboard/index.html"
 echo ""
 echo "To view the report:"
 echo "  allure open $REPORT_DIR"
+echo ""
+echo "To view the dashboard (all test history):"
+echo "  cd allure-reports/dashboard && python -m http.server 8000"
+echo "  Then open: http://localhost:8000"
 echo ""
 
 exit $TEST_EXIT_CODE
