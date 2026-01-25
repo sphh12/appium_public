@@ -160,6 +160,7 @@ def pytest_configure(config):
     repo_root = Path(getattr(config, "rootpath", Path.cwd()))
     git_branch = _safe_run_git(["rev-parse", "--abbrev-ref", "HEAD"], cwd=repo_root)
     git_commit = _safe_run_git(["rev-parse", "--short", "HEAD"], cwd=repo_root)
+    git_message = _safe_run_git(["log", "-1", "--pretty=%s"], cwd=repo_root)
     build_name = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}|{platform_name}" + (
         f"|{git_branch}@{git_commit}" if (git_branch or git_commit) else ""
     )
@@ -177,6 +178,7 @@ def pytest_configure(config):
         f"python={sys.version.split()[0]}",
         f"gitBranch={git_branch}",
         f"gitCommit={git_commit}",
+        f"gitMessage={git_message}",
     ]
     (results_path / "environment.properties").write_text(
         "\n".join(env_lines) + "\n",

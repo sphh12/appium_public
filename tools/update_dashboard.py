@@ -1,6 +1,7 @@
 import argparse
 import json
 import re
+import subprocess
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -18,6 +19,9 @@ class RunSummary:
     time: dict[str, int]
     executor: dict[str, Any]
     environment: dict[str, Any]
+  suites: list[dict[str, int | str]]
+  behaviors: list[dict[str, int | str]]
+  packages: list[dict[str, int | str]]
 
 
 def _read_json(path: Path) -> dict[str, Any] | None:
@@ -32,6 +36,35 @@ def _safe_int(value: Any, default: int = 0) -> int:
         return int(value)
     except Exception:
         return default
+
+
+  def _safe_git_message(repo_root: Path, commit: str) -> str:
+    if not commit:
+      return ""
+    try:
+      proc = subprocess.run(
+        ["git", "log", "-1", "--pretty=%s", commit],
+        cwd=str(repo_root),
+        check=True,
+        capture_output=True,
+        text=True,
+      )
+      return (proc.stdout or "").strip()
+    except Exception:
+      return ""
+
+
+  def _extract_branch_commit(build_name: str) -> tuple[str, str]:
+    raw = (build_name or "").strip()
+    if not raw:
+      return "", ""
+    parts = [p.strip() for p in raw.split("|") if p.strip()]
+    if len(parts) < 3:
+      return "", ""
+    if "@" not in parts[2]:
+      return "", ""
+    branch, commit = [p.strip() for p in parts[2].split("@", 1)]
+    return branch, commit
 
 
 def _duration_ms_to_hms(duration_ms: int) -> str:
@@ -51,6 +84,34 @@ def _pick_first_list_item(data: dict[str, Any] | None) -> dict[str, Any]:
     if isinstance(data, list):  # type: ignore[unreachable]
         return data[0] if data else {}
     return data
+
+
+  def _extract_widget_items(data: dict[str, Any] | None) -> list[dict[str, int | str]]:
+    if not data or not isinstance(data, dict):
+      return []
+    items = data.get("items")
+    if not isinstance(items, list):
+      return []
+    output: list[dict[str, int | str]] = []
+    for item in items:
+      if not isinstance(item, dict):
+        continue
+      name = str(item.get("name") or "").strip()
+      stat = item.get("statistic") or {}
+      if not name and not stat:
+        continue
+      output.append(
+        {
+          "name": name,
+          "total": _safe_int(stat.get("total"), 0),
+          "passed": _safe_int(stat.get("passed"), 0),
+          "failed": _safe_int(stat.get("failed"), 0),
+          "broken": _safe_int(stat.get("broken"), 0),
+          "skipped": _safe_int(stat.get("skipped"), 0),
+        }
+      )
+    output.sort(key=lambda x: int(x.get("total", 0)), reverse=True)
+    return output
 
 
 def _load_run_summary(report_dir: Path) -> RunSummary | None:
@@ -83,6 +144,9 @@ def _load_run_summary(report_dir: Path) -> RunSummary | None:
 
     executors = _read_json(report_dir / "widgets" / "executors.json")
     environment = _read_json(report_dir / "widgets" / "environment.json")
+    suites = _extract_widget_items(_read_json(report_dir / "widgets" / "suites.json"))
+    behaviors = _extract_widget_items(_read_json(report_dir / "widgets" / "behaviors.json"))
+    packages = _extract_widget_items(_read_json(report_dir / "widgets" / "packages.json"))
 
     executor_first = {}
     if isinstance(executors, list):
@@ -106,12 +170,16 @@ def _load_run_summary(report_dir: Path) -> RunSummary | None:
         time=time,
         executor=executor_first,
         environment=env_map,
+      suites=suites,
+      behaviors=behaviors,
+      packages=packages,
     )
 
 
 def update_dashboard(reports_root: Path) -> Path:
     dashboard_dir = reports_root / "dashboard"
     dashboard_dir.mkdir(parents=True, exist_ok=True)
+  repo_root = reports_root.resolve().parent
 
     runs: list[RunSummary] = []
     for child in reports_root.iterdir():
@@ -129,10 +197,22 @@ def update_dashboard(reports_root: Path) -> Path:
     # Build runs.json
     payload: list[dict[str, Any]] = []
     for r in runs:
+      env = dict(r.environment or {})
+      build_name = r.executor.get("buildName", "")
+      branch = str(env.get("gitBranch") or "").strip()
+      commit = str(env.get("gitCommit") or "").strip()
+      message = str(env.get("gitMessage") or "").strip()
+      if not branch or not commit:
+        parsed_branch, parsed_commit = _extract_branch_commit(build_name)
+        branch = branch or parsed_branch
+        commit = commit or parsed_commit
+      if not message and commit:
+        message = _safe_git_message(repo_root, commit)
+      env.update({"gitBranch": branch or None, "gitCommit": commit or None, "gitMessage": message or None})
         payload.append(
             {
                 "timestamp": r.timestamp,
-                "href": f"../{r.timestamp}/index.html",
+          "href": f"/allure-reports/{r.timestamp}/index.html",
                 "reportName": r.report_name,
                 "stats": r.stats,
                 "time": r.time,
@@ -143,7 +223,10 @@ def update_dashboard(reports_root: Path) -> Path:
                     "buildName": r.executor.get("buildName", ""),
                     "buildUrl": r.executor.get("buildUrl", ""),
                 },
-                "environment": r.environment,
+          "environment": env,
+                "suites": r.suites,
+                "behaviors": r.behaviors,
+                "packages": r.packages,
             }
         )
 
@@ -156,6 +239,7 @@ def update_dashboard(reports_root: Path) -> Path:
     (dashboard_dir / "styles.css").write_text(
         """/* Dashboard styles (local) */
 :root{
+  color-scheme: dark;
   --bg:#0b1220;
   --panel:#0f1b33;
   --text:#e6edf7;
@@ -173,8 +257,11 @@ a{color:inherit}
 .header{display:flex;gap:16px;align-items:flex-end;justify-content:space-between;margin-bottom:16px}
 .h1{font-size:22px;font-weight:700;letter-spacing:.2px}
 .sub{font-size:12px;color:var(--muted)}
-.controls{display:flex;gap:10px;align-items:center}
-input[type=search]{width:340px;max-width:60vw;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.06);color:var(--text)}
+.controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+input[type=search], input[type=date], select{padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.06);color:var(--text)}
+select option, select optgroup{background-color:#0f1b33;color:var(--text)}
+input[type=search]{width:340px;max-width:60vw}
+input[type=date]{color-scheme:dark}
 .card{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:14px;overflow:hidden}
 .table{width:100%;border-collapse:separate;border-spacing:0}
 th,td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
@@ -189,6 +276,8 @@ tr:hover td{background:rgba(255,255,255,.03)}
 .kv{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:12px;margin:10px 0 0}
 .kv span{padding:6px 10px;border:1px solid var(--border);border-radius:10px;background:rgba(255,255,255,.03)}
 .small{color:var(--muted);font-size:12px}
+.ellipsis{max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.result{font-weight:700;font-style:italic}
 .footer{margin-top:12px;color:var(--muted);font-size:12px}
 """,
         encoding="utf-8",
@@ -215,7 +304,14 @@ tr:hover td{background:rgba(255,255,255,.03)}
         </div>
       </div>
       <div class="controls">
-        <input id="q" type="search" placeholder="검색: timestamp / buildName / 플랫폼 / git" />
+        <input id="q" type="search" placeholder="검색: timestamp / buildName / 플랫폼 / git / commit message" />
+        <select id="result">
+          <option value="all">Result: 전체</option>
+          <option value="pass">PASS</option>
+          <option value="fail">FAIL</option>
+        </select>
+        <input id="from" type="date" />
+        <input id="to" type="date" />
       </div>
     </div>
 
@@ -225,12 +321,14 @@ tr:hover td{background:rgba(255,255,255,.03)}
           <tr>
             <th style="width:180px">Timestamp</th>
             <th>Build / Env</th>
-            <th style="width:110px">Duration</th>
+            <th style="width:320px">Tests</th>
+            <th style="width:90px">Result</th>
             <th style="width:90px">Total</th>
+            <th style="width:90px">Passed</th>
             <th style="width:90px">Failed</th>
             <th style="width:90px">Broken</th>
             <th style="width:90px">Skipped</th>
-            <th style="width:90px">Passed</th>
+            <th style="width:110px">Duration</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -242,39 +340,115 @@ tr:hover td{background:rgba(255,255,255,.03)}
 
 <script>
   const fmt = (v) => (v === undefined || v === null) ? '' : String(v);
+  const basePath = getBasePath();
+
+  function getBasePath() {
+    const path = window.location.pathname;
+    const marker = '/dashboard';
+    const idx = path.indexOf(marker);
+    if (idx >= 0) {
+      return path.slice(0, idx + 1);
+    }
+    return '/';
+  }
+
+  function resolveHref(run) {
+    const ts = (run && run.timestamp) ? String(run.timestamp) : '';
+    if (ts) {
+      return `${basePath}${ts}/index.html`;
+    }
+    const raw = (run && run.href) ? String(run.href) : '';
+    if (!raw) return '#';
+    if (raw.startsWith('/allure-reports/') && basePath === '/') {
+      return raw.replace(/^\/allure-reports\//, '/');
+    }
+    return raw;
+  }
+
+  function formatBuildName(value) {
+    const raw = fmt(value).trim();
+    if (!raw) return '(no buildName)';
+    const parts = raw.split('|').map(p => p.trim()).filter(Boolean);
+    const out = [];
+    if (parts[1]) out.push(parts[1]);
+    return out.join(' · ');
+  }
 
   function buildEnvLine(run) {
     const env = run.environment || {};
     const parts = [];
     if (env.platform) parts.push(`platform=${env.platform}`);
     if (env.deviceName) parts.push(`device=${env.deviceName}`);
-    if (env.gitBranch || env.gitCommit) parts.push(`git=${fmt(env.gitBranch)}@${fmt(env.gitCommit)}`);
+    if (env.gitBranch) parts.push(`branch=${fmt(env.gitBranch)}`);
+    if (env.gitMessage) parts.push(`commit=${fmt(env.gitMessage)}`);
     return parts.join('  ·  ');
+  }
+
+  function formatItems(items, limit = 4) {
+    if (!Array.isArray(items) || items.length === 0) return 'N/A';
+    const shown = items.slice(0, limit).map(i => `${fmt(i.name)}(${fmt(i.total)})`);
+    if (items.length > limit) {
+      shown.push(`+${items.length - limit}`);
+    }
+    return shown.join(', ');
+  }
+
+  function namesFrom(items) {
+    return Array.isArray(items) ? items.map(i => i && i.name ? i.name : '').join(' ') : '';
   }
 
   function row(run) {
     const stats = run.stats || {};
     const exe = run.executor || {};
-    const build = fmt(exe.buildName) || '(no buildName)';
+    const env = run.environment || {};
+    const build = formatBuildName(exe.buildName);
     const envLine = buildEnvLine(run);
+    const href = resolveHref(run);
+    const isPass = !(stats.failed || 0) && !(stats.broken || 0) && (stats.passed || 0) > 0;
+    const result = isPass ? 'PASS' : 'FAIL';
+    const resultColor = isPass ? 'var(--passed)' : 'var(--failed)';
+    const suitesText = formatItems(run.suites);
+    const behaviorsText = formatItems(run.behaviors);
+    const packagesText = formatItems(run.packages);
 
     return `
       <tr>
-        <td><a href="${run.href}">${run.timestamp}</a></td>
+        <td><a href="${href}">${run.timestamp}</a></td>
         <td>
           <div class="badge"><span class="dot ${stats.failed ? 'failed' : stats.broken ? 'broken' : stats.skipped ? 'skipped' : 'passed'}"></span>
             <span>${build}</span>
           </div>
           <div class="small">${envLine}</div>
         </td>
-        <td>${fmt(run.durationText)}</td>
+        <td>
+          <div class="small">Suites: ${suitesText}</div>
+          <div class="small">Behaviors: ${behaviorsText}</div>
+          <div class="small">Packages: ${packagesText}</div>
+        </td>
+        <td class="result" style="color:${resultColor}">${result}</td>
         <td>${fmt(stats.total)}</td>
+        <td style="color:var(--passed)">${fmt(stats.passed)}</td>
         <td style="color:var(--failed)">${fmt(stats.failed)}</td>
         <td style="color:var(--broken)">${fmt(stats.broken)}</td>
         <td style="color:var(--skipped)">${fmt(stats.skipped)}</td>
-        <td style="color:var(--passed)">${fmt(stats.passed)}</td>
+        <td>${fmt(run.durationText)}</td>
       </tr>
     `;
+  }
+
+  function getResult(run) {
+    const stats = run.stats || {};
+    const isPass = !(stats.failed || 0) && !(stats.broken || 0) && (stats.passed || 0) > 0;
+    return isPass ? 'pass' : 'fail';
+  }
+
+  function dateKeyFromTimestamp(ts) {
+    const match = String(ts || '').match(/^(\d{8})/);
+    return match ? match[1] : '';
+  }
+
+  function dateInputToKey(value) {
+    return value ? value.replace(/-/g, '') : '';
   }
 
   async function main() {
@@ -284,10 +458,20 @@ tr:hover td{background:rgba(255,255,255,.03)}
     const tbody = document.querySelector('#tbl tbody');
     const meta = document.getElementById('meta');
     const input = document.getElementById('q');
+    const resultSelect = document.getElementById('result');
+    const fromInput = document.getElementById('from');
+    const toInput = document.getElementById('to');
 
-    const render = (q) => {
-      const qq = (q || '').trim().toLowerCase();
+    const render = () => {
+      const qq = (input.value || '').trim().toLowerCase();
+      const result = resultSelect.value;
+      const startKey = dateInputToKey(fromInput.value);
+      const endKey = dateInputToKey(toInput.value);
       const filtered = runs.filter(r => {
+        if (result !== 'all' && getResult(r) !== result) return false;
+        const dateKey = dateKeyFromTimestamp(r.timestamp);
+        if (startKey && dateKey && dateKey < startKey) return false;
+        if (endKey && dateKey && dateKey > endKey) return false;
         if (!qq) return true;
         const hay = [
           r.timestamp,
@@ -295,7 +479,11 @@ tr:hover td{background:rgba(255,255,255,.03)}
           (r.environment && r.environment.platform) || '',
           (r.environment && r.environment.gitBranch) || '',
           (r.environment && r.environment.gitCommit) || '',
-          (r.environment && r.environment.deviceName) || ''
+          (r.environment && r.environment.gitMessage) || '',
+          (r.environment && r.environment.deviceName) || '',
+          namesFrom(r.suites),
+          namesFrom(r.behaviors),
+          namesFrom(r.packages)
         ].join(' ').toLowerCase();
         return hay.includes(qq);
       });
@@ -303,8 +491,11 @@ tr:hover td{background:rgba(255,255,255,.03)}
       meta.textContent = `총 ${runs.length}건 중 ${filtered.length}건 표시 · 업데이트: ${new Date().toLocaleString()}`;
     };
 
-    input.addEventListener('input', () => render(input.value));
-    render('');
+    input.addEventListener('input', render);
+    resultSelect.addEventListener('change', render);
+    fromInput.addEventListener('change', render);
+    toInput.addEventListener('change', render);
+    render();
   }
 
   main().catch(err => {

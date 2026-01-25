@@ -1,5 +1,30 @@
 # Change Notes
 
+## 2026-01-26
+
+### Allure 대시보드 개선
+- Build/Env 표시 개선(브랜치/커밋 메시지 표시 지원, 포맷 정리)
+- Result 컬럼 추가 및 PASS/FAIL 규칙 적용
+- Result 필터 추가(기존 Status 필터 제거), 날짜 범위 필터 유지
+- Tests 컬럼 추가: Suites/Behaviors/Packages 요약 표시 및 검색 반영
+- 링크/필터 렌더링 안정성 개선 및 스타일 보강(다크 드롭다운 등)
+
+변경 파일(주요):
+- [conftest.py](conftest.py)
+- [tools/update_dashboard.py](tools/update_dashboard.py)
+- [allure-reports/dashboard/index.html](allure-reports/dashboard/index.html)
+- [allure-reports/dashboard/styles.css](allure-reports/dashboard/styles.css)
+
+## 2026-01-25
+
+### Allure 대시보드 링크/서빙 개선
+- 대시보드 링크를 현재 URL 기준으로 동적 계산하여 서버 루트가 달라도 404가 나지 않도록 개선
+- 사용 방법: 레포 루트에서 정적 서버 실행 후 `/allure-reports/dashboard/`로 접속
+
+변경 파일:
+- [allure-reports/dashboard/index.html](allure-reports/dashboard/index.html)
+- [tools/update_dashboard.py](tools/update_dashboard.py)
+
 ## 2026-01-22
 
 ### 초기 화면 자동 처리(온보딩)

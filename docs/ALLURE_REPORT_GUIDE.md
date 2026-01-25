@@ -195,7 +195,7 @@ Allure UI에서 가장 자주 보는 상태 의미는 아래와 같습니다.
 
 - `allure-reports/dashboard/index.html`: 전체 실행 이력 목록(클릭 시 해당 리포트로 이동)
 
-대시보드는 `runs.json`을 읽어 렌더링하므로, 로컬에서 아래처럼 간단 서버로 여는 것을 권장합니다.
+대시보드는 `runs.json`을 읽어 렌더링하므로, 로컬에서 아래처럼 **레포 루트에서** 간단 서버로 여는 것을 권장합니다.
 
 ```bash
 python -m http.server 8000
@@ -203,6 +203,10 @@ python -m http.server 8000
 
 브라우저 접속:
 - `http://127.0.0.1:8000/allure-reports/dashboard/`
+
+중요
+- 서버를 `allure-reports/dashboard` 폴더에서 띄우면 상위 리포트 폴더에 접근할 수 없어 404가 발생합니다.
+- 대시보드 링크는 현재 URL 기준으로 동적 계산되므로, 레포 루트에서 띄우면 환경/PC가 달라도 동일하게 동작합니다.
 
 ---
 
