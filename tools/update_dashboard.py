@@ -19,9 +19,9 @@ class RunSummary:
     time: dict[str, int]
     executor: dict[str, Any]
     environment: dict[str, Any]
-  suites: list[dict[str, int | str]]
-  behaviors: list[dict[str, int | str]]
-  packages: list[dict[str, int | str]]
+    suites: list[dict[str, int | str]]
+    behaviors: list[dict[str, int | str]]
+    packages: list[dict[str, int | str]]
 
 
 def _read_json(path: Path) -> dict[str, Any] | None:
@@ -38,31 +38,31 @@ def _safe_int(value: Any, default: int = 0) -> int:
         return default
 
 
-  def _safe_git_message(repo_root: Path, commit: str) -> str:
+def _safe_git_message(repo_root: Path, commit: str) -> str:
     if not commit:
-      return ""
+        return ""
     try:
-      proc = subprocess.run(
-        ["git", "log", "-1", "--pretty=%s", commit],
-        cwd=str(repo_root),
-        check=True,
-        capture_output=True,
-        text=True,
-      )
-      return (proc.stdout or "").strip()
+        proc = subprocess.run(
+            ["git", "log", "-1", "--pretty=%s", commit],
+            cwd=str(repo_root),
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        return (proc.stdout or "").strip()
     except Exception:
-      return ""
+        return ""
 
 
-  def _extract_branch_commit(build_name: str) -> tuple[str, str]:
+def _extract_branch_commit(build_name: str) -> tuple[str, str]:
     raw = (build_name or "").strip()
     if not raw:
-      return "", ""
+        return "", ""
     parts = [p.strip() for p in raw.split("|") if p.strip()]
     if len(parts) < 3:
-      return "", ""
+        return "", ""
     if "@" not in parts[2]:
-      return "", ""
+        return "", ""
     branch, commit = [p.strip() for p in parts[2].split("@", 1)]
     return branch, commit
 
@@ -86,30 +86,30 @@ def _pick_first_list_item(data: dict[str, Any] | None) -> dict[str, Any]:
     return data
 
 
-  def _extract_widget_items(data: dict[str, Any] | None) -> list[dict[str, int | str]]:
+def _extract_widget_items(data: dict[str, Any] | None) -> list[dict[str, int | str]]:
     if not data or not isinstance(data, dict):
-      return []
+        return []
     items = data.get("items")
     if not isinstance(items, list):
-      return []
+        return []
     output: list[dict[str, int | str]] = []
     for item in items:
-      if not isinstance(item, dict):
-        continue
-      name = str(item.get("name") or "").strip()
-      stat = item.get("statistic") or {}
-      if not name and not stat:
-        continue
-      output.append(
-        {
-          "name": name,
-          "total": _safe_int(stat.get("total"), 0),
-          "passed": _safe_int(stat.get("passed"), 0),
-          "failed": _safe_int(stat.get("failed"), 0),
-          "broken": _safe_int(stat.get("broken"), 0),
-          "skipped": _safe_int(stat.get("skipped"), 0),
-        }
-      )
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("name") or "").strip()
+        stat = item.get("statistic") or {}
+        if not name and not stat:
+            continue
+        output.append(
+            {
+                "name": name,
+                "total": _safe_int(stat.get("total"), 0),
+                "passed": _safe_int(stat.get("passed"), 0),
+                "failed": _safe_int(stat.get("failed"), 0),
+                "broken": _safe_int(stat.get("broken"), 0),
+                "skipped": _safe_int(stat.get("skipped"), 0),
+            }
+        )
     output.sort(key=lambda x: int(x.get("total", 0)), reverse=True)
     return output
 
@@ -157,7 +157,12 @@ def _load_run_summary(report_dir: Path) -> RunSummary | None:
         for item in environment:
             try:
                 name = str(item.get("name"))
-                value = item.get("value")
+                # Allure uses "values" (array) not "value"
+                values = item.get("values")
+                if isinstance(values, list) and values:
+                    value = values[0]
+                else:
+                    value = item.get("value")
                 if name:
                     env_map[name] = value
             except Exception:
@@ -170,16 +175,16 @@ def _load_run_summary(report_dir: Path) -> RunSummary | None:
         time=time,
         executor=executor_first,
         environment=env_map,
-      suites=suites,
-      behaviors=behaviors,
-      packages=packages,
+        suites=suites,
+        behaviors=behaviors,
+        packages=packages,
     )
 
 
 def update_dashboard(reports_root: Path) -> Path:
     dashboard_dir = reports_root / "dashboard"
     dashboard_dir.mkdir(parents=True, exist_ok=True)
-  repo_root = reports_root.resolve().parent
+    repo_root = reports_root.resolve().parent
 
     runs: list[RunSummary] = []
     for child in reports_root.iterdir():
@@ -197,22 +202,22 @@ def update_dashboard(reports_root: Path) -> Path:
     # Build runs.json
     payload: list[dict[str, Any]] = []
     for r in runs:
-      env = dict(r.environment or {})
-      build_name = r.executor.get("buildName", "")
-      branch = str(env.get("gitBranch") or "").strip()
-      commit = str(env.get("gitCommit") or "").strip()
-      message = str(env.get("gitMessage") or "").strip()
-      if not branch or not commit:
-        parsed_branch, parsed_commit = _extract_branch_commit(build_name)
-        branch = branch or parsed_branch
-        commit = commit or parsed_commit
-      if not message and commit:
-        message = _safe_git_message(repo_root, commit)
-      env.update({"gitBranch": branch or None, "gitCommit": commit or None, "gitMessage": message or None})
+        env = dict(r.environment or {})
+        build_name = r.executor.get("buildName", "")
+        branch = str(env.get("gitBranch") or "").strip()
+        commit = str(env.get("gitCommit") or "").strip()
+        message = str(env.get("gitMessage") or "").strip()
+        if not branch or not commit:
+            parsed_branch, parsed_commit = _extract_branch_commit(build_name)
+            branch = branch or parsed_branch
+            commit = commit or parsed_commit
+        if not message and commit:
+            message = _safe_git_message(repo_root, commit)
+        env.update({"gitBranch": branch or None, "gitCommit": commit or None, "gitMessage": message or None})
         payload.append(
             {
                 "timestamp": r.timestamp,
-          "href": f"/allure-reports/{r.timestamp}/index.html",
+                "href": f"/allure-reports/{r.timestamp}/index.html",
                 "reportName": r.report_name,
                 "stats": r.stats,
                 "time": r.time,
@@ -223,7 +228,7 @@ def update_dashboard(reports_root: Path) -> Path:
                     "buildName": r.executor.get("buildName", ""),
                     "buildUrl": r.executor.get("buildUrl", ""),
                 },
-          "environment": env,
+                "environment": env,
                 "suites": r.suites,
                 "behaviors": r.behaviors,
                 "packages": r.packages,
@@ -299,8 +304,7 @@ tr:hover td{background:rgba(255,255,255,.03)}
         <div class="h1">Allure Reports Dashboard</div>
         <div class="sub">저장된 전체 실행 이력 목록. 항목 클릭 시 해당 Allure 리포트를 엽니다.</div>
         <div class="kv">
-          <span>열기 팁: <code>python -m http.server 8000</code> 후 <code>/allure-reports/dashboard/</code></span>
-          <span>runs.json 기반(디렉토리 자동 나열은 브라우저에서 불가)</span>
+          <span>열기 팁: <code>python tools/serve.py</code></span>
         </div>
       </div>
       <div class="controls">
@@ -319,16 +323,16 @@ tr:hover td{background:rgba(255,255,255,.03)}
       <table class="table" id="tbl">
         <thead>
           <tr>
-            <th style="width:180px">Timestamp</th>
-            <th>Build / Env</th>
-            <th style="width:320px">Tests</th>
-            <th style="width:90px">Result</th>
-            <th style="width:90px">Total</th>
-            <th style="width:90px">Passed</th>
-            <th style="width:90px">Failed</th>
-            <th style="width:90px">Broken</th>
-            <th style="width:90px">Skipped</th>
-            <th style="width:110px">Duration</th>
+            <th style="width:160px">Timestamp</th>
+            <th style="width:260px">Device / Tests</th>
+            <th style="width:280px">Branch / Commit</th>
+            <th style="width:70px">Result</th>
+            <th style="width:60px">Total</th>
+            <th style="width:60px">Pass</th>
+            <th style="width:60px">Fail</th>
+            <th style="width:60px">Broken</th>
+            <th style="width:60px">Skip</th>
+            <th style="width:90px">Duration</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -365,32 +369,21 @@ tr:hover td{background:rgba(255,255,255,.03)}
     return raw;
   }
 
-  function formatBuildName(value) {
-    const raw = fmt(value).trim();
-    if (!raw) return '(no buildName)';
-    const parts = raw.split('|').map(p => p.trim()).filter(Boolean);
-    const out = [];
-    if (parts[1]) out.push(parts[1]);
-    return out.join(' · ');
+  function truncate(str, maxLen = 40) {
+    if (!str || str.length <= maxLen) return str || '';
+    return str.slice(0, maxLen) + '...';
   }
 
-  function buildEnvLine(run) {
-    const env = run.environment || {};
-    const parts = [];
-    if (env.platform) parts.push(`platform=${env.platform}`);
-    if (env.deviceName) parts.push(`device=${env.deviceName}`);
-    if (env.gitBranch) parts.push(`branch=${fmt(env.gitBranch)}`);
-    if (env.gitMessage) parts.push(`commit=${fmt(env.gitMessage)}`);
-    return parts.join('  ·  ');
-  }
-
-  function formatItems(items, limit = 4) {
-    if (!Array.isArray(items) || items.length === 0) return 'N/A';
-    const shown = items.slice(0, limit).map(i => `${fmt(i.name)}(${fmt(i.total)})`);
+  function formatBehaviors(items, limit = 4) {
+    if (!Array.isArray(items) || items.length === 0) return '';
+    const names = items.slice(0, limit).map(i => fmt(i.name)).filter(Boolean);
+    const total = items.reduce((sum, i) => sum + (i.total || 0), 0);
+    if (names.length === 0) return '';
+    let text = names.join(', ');
     if (items.length > limit) {
-      shown.push(`+${items.length - limit}`);
+      text += `, +${items.length - limit}`;
     }
-    return shown.join(', ');
+    return `${text} (${total})`;
   }
 
   function namesFrom(items) {
@@ -401,29 +394,32 @@ tr:hover td{background:rgba(255,255,255,.03)}
     const stats = run.stats || {};
     const exe = run.executor || {};
     const env = run.environment || {};
-    const build = formatBuildName(exe.buildName);
-    const envLine = buildEnvLine(run);
     const href = resolveHref(run);
     const isPass = !(stats.failed || 0) && !(stats.broken || 0) && (stats.passed || 0) > 0;
     const result = isPass ? 'PASS' : 'FAIL';
     const resultColor = isPass ? 'var(--passed)' : 'var(--failed)';
-    const suitesText = formatItems(run.suites);
-    const behaviorsText = formatItems(run.behaviors);
-    const packagesText = formatItems(run.packages);
+
+    // Tests column: Device + Behaviors
+    const deviceName = env.deviceName || env.platform || 'Unknown';
+    const behaviorsText = formatBehaviors(run.behaviors, 4);
+
+    // Build/Env column: Git info
+    const branch = fmt(env.gitBranch) || 'no-branch';
+    const commit = fmt(env.gitCommit) || '';
+    const message = truncate(fmt(env.gitMessage), 35);
 
     return `
       <tr>
         <td><a href="${href}">${run.timestamp}</a></td>
         <td>
-          <div class="badge"><span class="dot ${stats.failed ? 'failed' : stats.broken ? 'broken' : stats.skipped ? 'skipped' : 'passed'}"></span>
-            <span>${build}</span>
-          </div>
-          <div class="small">${envLine}</div>
+          <div><strong>${deviceName}</strong></div>
+          <div class="small">${behaviorsText || 'N/A'}</div>
         </td>
         <td>
-          <div class="small">Suites: ${suitesText}</div>
-          <div class="small">Behaviors: ${behaviorsText}</div>
-          <div class="small">Packages: ${packagesText}</div>
+          <div class="badge"><span class="dot ${stats.failed ? 'failed' : stats.broken ? 'broken' : stats.skipped ? 'skipped' : 'passed'}"></span>
+            <span>${branch}${commit ? ' @ ' + commit : ''}</span>
+          </div>
+          <div class="small ellipsis">${message}</div>
         </td>
         <td class="result" style="color:${resultColor}">${result}</td>
         <td>${fmt(stats.total)}</td>
