@@ -24,6 +24,7 @@
   - `powershell -ExecutionPolicy Bypass -File shell/bootstrap.ps1`
 
 Android 버전을 고정해서 맞추고 싶으면(선택):
+
 - `powershell -ExecutionPolicy Bypass -File shell/bootstrap.ps1 -AndroidPlatformVersion 12`
 
 ---

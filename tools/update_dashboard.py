@@ -313,6 +313,8 @@ tr:hover td{background:rgba(255,255,255,.03)}
           <option value="all">Result: 전체</option>
           <option value="pass">PASS</option>
           <option value="fail">FAIL</option>
+          <option value="broken">BROKEN</option>
+          <option value="skip">SKIP</option>
         </select>
         <input id="from" type="date" />
         <input id="to" type="date" />
@@ -395,9 +397,20 @@ tr:hover td{background:rgba(255,255,255,.03)}
     const exe = run.executor || {};
     const env = run.environment || {};
     const href = resolveHref(run);
-    const isPass = !(stats.failed || 0) && !(stats.broken || 0) && (stats.passed || 0) > 0;
-    const result = isPass ? 'PASS' : 'FAIL';
-    const resultColor = isPass ? 'var(--passed)' : 'var(--failed)';
+
+    // Priority: Failed > Passed > Broken > Skip
+    let result, resultColor;
+    if ((stats.failed || 0) > 0) {
+      result = 'FAIL'; resultColor = 'var(--failed)';
+    } else if ((stats.passed || 0) > 0) {
+      result = 'PASS'; resultColor = 'var(--passed)';
+    } else if ((stats.broken || 0) > 0) {
+      result = 'BROKEN'; resultColor = 'var(--broken)';
+    } else if ((stats.skipped || 0) > 0) {
+      result = 'SKIP'; resultColor = 'var(--skipped)';
+    } else {
+      result = '-'; resultColor = 'var(--muted)';
+    }
 
     // Tests column: Device + Behaviors
     const deviceName = env.deviceName || env.platform || 'Unknown';
@@ -434,8 +447,12 @@ tr:hover td{background:rgba(255,255,255,.03)}
 
   function getResult(run) {
     const stats = run.stats || {};
-    const isPass = !(stats.failed || 0) && !(stats.broken || 0) && (stats.passed || 0) > 0;
-    return isPass ? 'pass' : 'fail';
+    // Priority: Failed > Passed > Broken > Skip
+    if ((stats.failed || 0) > 0) return 'fail';
+    if ((stats.passed || 0) > 0) return 'pass';
+    if ((stats.broken || 0) > 0) return 'broken';
+    if ((stats.skipped || 0) > 0) return 'skip';
+    return 'unknown';
   }
 
   function dateKeyFromTimestamp(ts) {
