@@ -415,6 +415,12 @@ tr:hover td{background:rgba(255,255,255,.03)}
     // Tests column: Device + Behaviors
     const deviceName = env.deviceName || env.platform || 'Unknown';
     const behaviorsText = formatBehaviors(run.behaviors, 4);
+    const platformVersion = fmt(env.platformVersion);
+    const appName = fmt(env.app).split(/[\/\\]/).pop();
+    const appVersionMatch = appName.match(/(\d+\.\d+(?:\.\d+)*)(?:\.apk|\.ipa)?/i);
+    const appVersion = appVersionMatch ? appVersionMatch[1] : '';
+    const osLine = platformVersion ? `OS: ${platformVersion}` : '';
+    const appLine = appVersion ? `App: v${appVersion}` : '';
 
     // Build/Env column: Git info
     const branch = fmt(env.gitBranch) || 'no-branch';
@@ -427,6 +433,8 @@ tr:hover td{background:rgba(255,255,255,.03)}
         <td>
           <div><strong>${deviceName}</strong></div>
           <div class="small">${behaviorsText || 'N/A'}</div>
+          ${osLine ? `<div class="small">${osLine}</div>` : ''}
+          ${appLine ? `<div class="small">${appLine}</div>` : ''}
         </td>
         <td>
           <div class="badge"><span class="dot ${stats.failed ? 'failed' : stats.broken ? 'broken' : stats.skipped ? 'skipped' : 'passed'}"></span>
@@ -494,6 +502,8 @@ tr:hover td{background:rgba(255,255,255,.03)}
           (r.environment && r.environment.gitCommit) || '',
           (r.environment && r.environment.gitMessage) || '',
           (r.environment && r.environment.deviceName) || '',
+          (r.environment && r.environment.platformVersion) || '',
+          (r.environment && r.environment.app) || '',
           namesFrom(r.suites),
           namesFrom(r.behaviors),
           namesFrom(r.packages)

@@ -35,6 +35,12 @@
 | Broken > 0 | BROKEN | 노랑 |
 | Skipped > 0 | SKIP | 회색 |
 
+### 플랫폼/앱 버전 표시 보강
+
+- Android `platformVersion`이 비어있으면 adb에서 자동 수집하여 환경 정보에 기록
+- 대시보드 `Device / Tests`에 OS 버전과 App 버전 표시(앱 파일명에서 버전 추출)
+- App 경로 처리/정규식 오류 수정으로 렌더링 안정화
+
 ### 실물 디바이스 지원 (환경변수 방식)
 
 - 환경변수로 에뮬레이터/실물 디바이스 선택 가능
@@ -59,6 +65,7 @@ Remove-Item Env:ANDROID_UDID
 - [tools/serve.py](tools/serve.py) (신규)
 - [tools/update_dashboard.py](tools/update_dashboard.py)
 - [config/capabilities.py](config/capabilities.py)
+- [conftest.py](conftest.py)
 
 ## 2026-01-25
 

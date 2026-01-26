@@ -56,6 +56,19 @@ def _safe_run_git(args: list[str], cwd: Path) -> str:
         return ""
 
 
+def _safe_get_android_platform_version() -> str:
+    try:
+        proc = subprocess.run(
+            ["adb", "shell", "getprop", "ro.build.version.release"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        return (proc.stdout or "").strip()
+    except Exception:
+        return ""
+
+
 def _write_executor_json(results_path: Path, build_name: str) -> None:
     executor = {
         "name": getpass.getuser() or "local",
@@ -157,6 +170,10 @@ def pytest_configure(config):
     caps = ANDROID_CAPS if platform_name == "android" else IOS_CAPS
     effective_app = app_path or str(caps.get("app", ""))
 
+    platform_version = str(caps.get("platformVersion", "") or "").strip()
+    if not platform_version and platform_name == "android":
+        platform_version = _safe_get_android_platform_version()
+
     repo_root = Path(getattr(config, "rootpath", Path.cwd()))
     git_branch = _safe_run_git(["rev-parse", "--abbrev-ref", "HEAD"], cwd=repo_root)
     git_commit = _safe_run_git(["rev-parse", "--short", "HEAD"], cwd=repo_root)
@@ -168,7 +185,7 @@ def pytest_configure(config):
     env_lines = [
         f"platform={platform_name}",
         f"deviceName={caps.get('deviceName', '')}",
-        f"platformVersion={caps.get('platformVersion', '')}",
+        f"platformVersion={platform_version}",
         f"automationName={caps.get('automationName', '')}",
         f"app={effective_app}",
         f"appiumServer={get_appium_server_url()}",
