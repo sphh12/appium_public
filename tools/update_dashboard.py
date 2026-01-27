@@ -259,18 +259,19 @@ def update_dashboard(reports_root: Path) -> Path:
 body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(180deg,var(--bg),#070b14);color:var(--text)}
 a{color:inherit}
 .container{max-width:1200px;margin:0 auto;padding:24px}
-.header{display:flex;gap:16px;align-items:flex-end;justify-content:space-between;margin-bottom:16px}
+.header{display:flex;flex-direction:column;gap:16px;margin-bottom:16px}
+.header-top{display:flex;gap:16px;align-items:center;justify-content:space-between}
 .h1{font-size:22px;font-weight:700;letter-spacing:.2px}
-.sub{font-size:12px;color:var(--muted)}
-.controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.sub{font-size:12px;color:var(--muted);white-space:nowrap}
+.controls{display:flex;gap:10px;align-items:center;padding:12px 16px;background:rgba(255,255,255,.02);border-radius:12px;border:1px solid var(--border)}
 input[type=search], input[type=date], select{padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.06);color:var(--text)}
 select option, select optgroup{background-color:#0f1b33;color:var(--text)}
 input[type=search]{width:340px;max-width:60vw}
 input[type=date]{color-scheme:dark}
 .card{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:14px;overflow:hidden}
 .table{width:100%;border-collapse:separate;border-spacing:0}
-th,td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
-th{color:var(--muted);font-weight:600;text-align:left;background:rgba(255,255,255,.02)}
+th,td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle;text-align:center}
+th{color:var(--muted);font-weight:600;background:rgba(255,255,255,.02)}
 tr:hover td{background:rgba(255,255,255,.03)}
 .badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;border:1px solid var(--border);font-size:12px}
 .dot{width:8px;height:8px;border-radius:999px}
@@ -300,12 +301,8 @@ tr:hover td{background:rgba(255,255,255,.03)}
 <body>
   <div class="container">
     <div class="header">
-      <div>
+      <div class="header-top">
         <div class="h1">Allure Reports Dashboard</div>
-        <div class="sub">저장된 전체 실행 이력 목록. 항목 클릭 시 해당 Allure 리포트를 엽니다.</div>
-        <div class="kv">
-          <span>열기 팁: <code>python tools/serve.py</code></span>
-        </div>
       </div>
       <div class="controls">
         <input id="q" type="search" placeholder="검색: timestamp / buildName / 플랫폼 / git / commit message" />
@@ -318,6 +315,7 @@ tr:hover td{background:rgba(255,255,255,.03)}
         </select>
         <input id="from" type="date" />
         <input id="to" type="date" />
+        <button id="clearBtn" type="button" style="margin-left:auto;padding:10px 16px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.06);color:var(--text);cursor:pointer">Clear</button>
       </div>
     </div>
 
@@ -325,9 +323,9 @@ tr:hover td{background:rgba(255,255,255,.03)}
       <table class="table" id="tbl">
         <thead>
           <tr>
-            <th style="width:160px">Timestamp</th>
-            <th style="width:260px">Device / Tests</th>
-            <th style="width:280px">Branch / Commit</th>
+            <th style="width:160px;text-align:left">Timestamp</th>
+            <th style="width:260px;text-align:left">Device / Tests</th>
+            <th style="width:280px;text-align:left">Branch / Commit</th>
             <th style="width:70px">Result</th>
             <th style="width:60px">Total</th>
             <th style="width:60px">Pass</th>
@@ -376,6 +374,14 @@ tr:hover td{background:rgba(255,255,255,.03)}
     return str.slice(0, maxLen) + '...';
   }
 
+  function formatTimestamp(ts) {
+    // Parse "20260127_153847" -> { date: "2026-01-27", time: "15:38:47" }
+    const match = String(ts || '').match(/^(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})$/);
+    if (!match) return { date: ts || '', time: '' };
+    const [, y, m, d, hh, mm, ss] = match;
+    return { date: `${y}-${m}-${d}`, time: `${hh}:${mm}:${ss}` };
+  }
+
   function formatBehaviors(items, limit = 4) {
     if (!Array.isArray(items) || items.length === 0) return '';
     const names = items.slice(0, limit).map(i => fmt(i.name)).filter(Boolean);
@@ -416,7 +422,7 @@ tr:hover td{background:rgba(255,255,255,.03)}
     const deviceName = env.deviceName || env.platform || 'Unknown';
     const behaviorsText = formatBehaviors(run.behaviors, 4);
     const platformVersion = fmt(env.platformVersion);
-    const appName = fmt(env.app).split(/[\/\\]/).pop();
+    const appName = fmt(env.app).split(/[\\/\\\\]/).pop();
     const appVersionMatch = appName.match(/(\d+\.\d+(?:\.\d+)*)(?:\.apk|\.ipa)?/i);
     const appVersion = appVersionMatch ? appVersionMatch[1] : '';
     const osLine = platformVersion ? `OS: ${platformVersion}` : '';
@@ -425,18 +431,20 @@ tr:hover td{background:rgba(255,255,255,.03)}
     // Build/Env column: Git info
     const branch = fmt(env.gitBranch) || 'no-branch';
     const commit = fmt(env.gitCommit) || '';
-    const message = truncate(fmt(env.gitMessage), 35);
+    const rawMessage = fmt(env.gitMessage);
+    const message = rawMessage ? truncate(rawMessage, 35) : '<span style="color:var(--muted);font-style:italic">(no message)</span>';
 
+    const ts = formatTimestamp(run.timestamp);
     return `
       <tr>
-        <td><a href="${href}">${run.timestamp}</a></td>
-        <td>
+        <td style="text-align:left"><a href="${href}"><div>${ts.date}</div><div class="small">${ts.time}</div></a></td>
+        <td style="text-align:left">
           <div><strong>${deviceName}</strong></div>
-          <div class="small">${behaviorsText || 'N/A'}</div>
           ${osLine ? `<div class="small">${osLine}</div>` : ''}
           ${appLine ? `<div class="small">${appLine}</div>` : ''}
+          <div class="small">${behaviorsText || 'N/A'}</div>
         </td>
-        <td>
+        <td style="text-align:left">
           <div class="badge"><span class="dot ${stats.failed ? 'failed' : stats.broken ? 'broken' : stats.skipped ? 'skipped' : 'passed'}"></span>
             <span>${branch}${commit ? ' @ ' + commit : ''}</span>
           </div>
@@ -514,10 +522,19 @@ tr:hover td{background:rgba(255,255,255,.03)}
       meta.textContent = `총 ${runs.length}건 중 ${filtered.length}건 표시 · 업데이트: ${new Date().toLocaleString()}`;
     };
 
+    const clearBtn = document.getElementById('clearBtn');
+
     input.addEventListener('input', render);
     resultSelect.addEventListener('change', render);
     fromInput.addEventListener('change', render);
     toInput.addEventListener('change', render);
+    clearBtn.addEventListener('click', () => {
+      input.value = '';
+      resultSelect.value = 'all';
+      fromInput.value = '';
+      toInput.value = '';
+      render();
+    });
     render();
   }
 

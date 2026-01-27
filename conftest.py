@@ -57,6 +57,7 @@ def _safe_run_git(args: list[str], cwd: Path) -> str:
 
 
 def _safe_get_android_platform_version() -> str:
+    """adb를 통해 Android OS 버전 조회 (예: 14, 13)"""
     try:
         proc = subprocess.run(
             ["adb", "shell", "getprop", "ro.build.version.release"],
@@ -67,6 +68,57 @@ def _safe_get_android_platform_version() -> str:
         return (proc.stdout or "").strip()
     except Exception:
         return ""
+
+
+def _safe_get_android_device_model(max_retries: int = 3, retry_delay: float = 1.0) -> str:
+    """adb를 통해 디바이스 모델명 조회
+
+    조회 우선순위:
+    1. ro.boot.qemu.avd_name - 에뮬레이터 AVD 이름 (예: Pixel_6_API_34)
+    2. ro.product.model - 실물 디바이스 모델명 (예: Pixel 6, Galaxy S21)
+
+    반환 형식: "Pixel_6 (Emulator)" 또는 "Pixel 6 (Device)"
+
+    Args:
+        max_retries: adb 연결 실패 시 재시도 횟수
+        retry_delay: 재시도 간 대기 시간(초)
+    """
+    for attempt in range(max_retries):
+        # 1) 에뮬레이터: AVD 이름 조회
+        try:
+            proc = subprocess.run(
+                ["adb", "shell", "getprop", "ro.boot.qemu.avd_name"],
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            avd_name = (proc.stdout or "").strip()
+            if avd_name:
+                return f"{avd_name} (Emulator)"
+        except Exception:
+            pass
+
+        # 2) 실물 디바이스: 모델명 조회
+        try:
+            proc = subprocess.run(
+                ["adb", "shell", "getprop", "ro.product.model"],
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            model = (proc.stdout or "").strip()
+            if model:
+                return f"{model} (Device)"
+        except Exception:
+            pass
+
+        # 재시도 전 대기
+        if attempt < max_retries - 1:
+            time.sleep(retry_delay)
+
+    return ""
 
 
 def _write_executor_json(results_path: Path, build_name: str) -> None:
@@ -173,6 +225,21 @@ def pytest_configure(config):
     platform_version = str(caps.get("platformVersion", "") or "").strip()
     if not platform_version and platform_name == "android":
         platform_version = _safe_get_android_platform_version()
+    # OS 버전에 플랫폼명 접두사 추가 (예: "14" → "Android 14")
+    if platform_version:
+        if platform_name == "android" and not platform_version.lower().startswith("android"):
+            platform_version = f"Android {platform_version}"
+        elif platform_name == "ios" and not platform_version.lower().startswith("ios"):
+            platform_version = f"iOS {platform_version}"
+
+    # deviceName: 환경변수 > adb 모델명 > 기본값("Android Emulator")
+    device_name = str(caps.get("deviceName", "") or "").strip()
+    if platform_name == "android" and (not device_name or device_name == "Android Emulator"):
+        adb_model = _safe_get_android_device_model()
+        if adb_model:
+            device_name = adb_model
+    if not device_name:
+        device_name = caps.get("deviceName", "Unknown")
 
     repo_root = Path(getattr(config, "rootpath", Path.cwd()))
     git_branch = _safe_run_git(["rev-parse", "--abbrev-ref", "HEAD"], cwd=repo_root)
@@ -184,7 +251,7 @@ def pytest_configure(config):
 
     env_lines = [
         f"platform={platform_name}",
-        f"deviceName={caps.get('deviceName', '')}",
+        f"deviceName={device_name}",
         f"platformVersion={platform_version}",
         f"automationName={caps.get('automationName', '')}",
         f"app={effective_app}",

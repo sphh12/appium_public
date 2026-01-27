@@ -1,5 +1,45 @@
 # Change Notes
 
+## 2026-01-27
+
+### APK별 실행 스크립트 추가
+
+- **run-stg.sh / run-live.sh 생성**: Staging/Live APK 전용 실행 스크립트
+  - 경로: `shell/run-stg.sh`, `shell/run-live.sh`
+  - 기존 `run-app.sh`를 `--app` 옵션과 함께 호출하는 래퍼 스크립트
+- **run-app.sh에 `--app` 옵션 추가**: APK/IPA 파일 경로 지정 가능
+- **MINGW 경로 변환 로직 추가**: `cygpath -w`로 Windows 경로 자동 변환
+
+사용법:
+```bash
+./shell/run-stg.sh --basic_01_test      # Staging APK로 테스트
+./shell/run-live.sh --basic_01_test     # Live APK로 테스트
+./shell/run-app.sh --app apk/custom.apk # 직접 APK 지정
+```
+
+변경 파일:
+- [shell/run-stg.sh](shell/run-stg.sh) (신규)
+- [shell/run-live.sh](shell/run-live.sh) (신규)
+- [shell/run-app.sh](shell/run-app.sh)
+
+---
+
+### Allure 대시보드 UI 개선
+
+- **Timestamp 형식 개선**: 날짜/시간 분리 표시
+  - 기존: `20260127_153847` (단일 행)
+  - 변경: `2026-01-27` + `15:38:47` (2행, 시간은 작은 글씨)
+  - `formatTimestamp()` JavaScript 함수 추가
+- **테이블 정렬 개선**:
+  - 기본: 모든 컬럼 가운데 정렬
+  - 예외: Timestamp, Device/Tests, Branch/Commit 컬럼은 좌측 정렬 (가독성 향상)
+
+변경 파일:
+
+- [tools/update_dashboard.py](tools/update_dashboard.py)
+
+---
+
 ## 2026-01-26
 
 ### Allure 리포트 서버 간편 실행 (`tools/serve.py` 신규)
@@ -15,6 +55,8 @@
   - `Branch / Commit`: 브랜치 @ 커밋해시 + 커밋 메시지 (Git 정보 중심)
 - commit 메시지 35자 truncate 처리
 - 컬럼 너비 최적화, 헤더 이름 변경
+- 커밋 메시지 없을 시 `(no message)` 표시
+- **Clear 버튼 추가**: Result/Date 필터 한번에 초기화
 
 ### Allure 대시보드 데이터 파싱 수정
 
@@ -38,8 +80,21 @@
 ### 플랫폼/앱 버전 표시 보강
 
 - Android `platformVersion`이 비어있으면 adb에서 자동 수집하여 환경 정보에 기록
+- OS 버전에 플랫폼명 접두사 자동 추가: `14` → `Android 14`, `17.0` → `iOS 17.0`
 - 대시보드 `Device / Tests`에 OS 버전과 App 버전 표시(앱 파일명에서 버전 추출)
 - App 경로 처리/정규식 오류 수정으로 렌더링 안정화
+
+### 디바이스 모델명 자동 감지
+
+- adb를 통해 디바이스 모델명 자동 조회
+- 조회 우선순위:
+  1. **환경변수** (`ANDROID_DEVICE_NAME`)
+  2. **AVD 이름** (`ro.boot.qemu.avd_name`) - 에뮬레이터용
+  3. **모델명** (`ro.product.model`) - 실물 디바이스용
+  4. **기본값** ("Android Emulator")
+- 에뮬레이터: `Pixel_6 (Emulator)` 형식으로 표시
+- 실물 디바이스: `Pixel 6 (Device)` 형식으로 표시
+- adb 연결 불안정 시 재시도 로직 추가 (최대 3회, 1초 간격)
 
 ### 실물 디바이스 지원 (환경변수 방식)
 
@@ -56,7 +111,29 @@ $env:ANDROID_DEVICE_NAME = "Pixel 6"
 Remove-Item Env:ANDROID_UDID
 ```
 
-### 코드 품질 개선
+### 대시보드 버그 수정
+
+- JavaScript 정규식 백슬래시 escape 문제 수정 (`/[\/\\]/`)
+- Python 문자열에서 `\\` → `\\\\`로 변경하여 올바른 JavaScript 출력
+
+### 코드 품질 설정 추가
+
+회사/집 환경에서 pull 후 바로 실행되도록 코드 스타일 통일 설정:
+
+- **EditorConfig**: 에디터 설정 통일 (들여쓰기 4칸, LF 줄바꿈)
+- **pyproject.toml**: Ruff 린터/포매터 설정
+- **Pre-commit hooks**: 커밋 전 자동 검사/수정
+
+```bash
+# Pre-commit 설치 및 활성화
+pip install pre-commit
+pre-commit install
+
+# 전체 파일 검사 (최초 1회)
+pre-commit run --all-files
+```
+
+### 기타 개선
 
 - `tools/update_dashboard.py` 인덴테이션 수정 (탭/스페이스 혼용 → 4스페이스 통일)
 
@@ -66,6 +143,9 @@ Remove-Item Env:ANDROID_UDID
 - [tools/update_dashboard.py](tools/update_dashboard.py)
 - [config/capabilities.py](config/capabilities.py)
 - [conftest.py](conftest.py)
+- [.editorconfig](.editorconfig) (신규)
+- [pyproject.toml](pyproject.toml) (신규)
+- [.pre-commit-config.yaml](.pre-commit-config.yaml) (신규)
 
 ## 2026-01-25
 

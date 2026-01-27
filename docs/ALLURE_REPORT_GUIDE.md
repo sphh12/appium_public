@@ -267,3 +267,257 @@ python -m http.server 8000
 - `@allure.title("..." )`
 - `@allure.description("..." )`
 - `with allure.step("..." ):`
+
+---
+
+## 8) 진단용 첨부 파일 상세 가이드
+
+테스트 실패 시 자동으로 첨부되는 진단 파일들입니다. 재현 없이 원인을 파악하는 데 핵심적인 역할을 합니다.
+
+### 8.1 page_source_*.xml (UI 구조 스냅샷)
+
+**설명**: 테스트 실패 시점의 화면 UI 구조를 XML 형태로 캡처한 파일입니다.
+
+**확인 가능한 정보**:
+
+- 현재 화면에 표시된 모든 UI 요소 목록
+- 각 요소의 속성 (`resource-id`, `content-desc`, `text`, `class`, `bounds` 등)
+- 요소의 상태 (`clickable`, `enabled`, `displayed`, `focused` 등)
+- 화면 계층 구조 (부모-자식 관계)
+
+**활용 방법**:
+
+| 상황 | 확인 포인트 |
+|------|-------------|
+| 요소를 찾지 못함 | XML에서 해당 요소가 존재하는지 검색 |
+| 잘못된 화면 | 예상 화면의 고유 요소가 있는지 확인 |
+| 로케이터 실패 | `resource-id`, `content-desc` 값 변경 여부 확인 |
+| 동적 요소 | `text` 속성이 예상과 다른지 확인 |
+
+**예시**:
+```xml
+<android.widget.Button
+    resource-id="com.app:id/btn_login"
+    text="로그인"
+    clickable="true"
+    enabled="false"  <!-- 버튼이 비활성화 상태! -->
+    bounds="[100,500][300,600]"
+/>
+```
+
+---
+
+### 8.2 capabilities_*.json (Appium 설정 정보)
+
+**설명**: 테스트 실행 시 사용된 Appium Desired Capabilities 설정 파일입니다.
+
+**확인 가능한 정보**:
+
+- **디바이스 정보**: `deviceName`, `udid`, `platformVersion`
+- **앱 정보**: `appPackage`, `appActivity`, `app` 경로
+- **자동화 설정**: `automationName`, `autoGrantPermissions`, `noReset`
+- **타임아웃 설정**: `newCommandTimeout`, `adbExecTimeout`
+- **기타 옵션**: `unicodeKeyboard`, `resetKeyboard`, `fullReset` 등
+
+**활용 방법**:
+
+| 상황 | 확인 포인트 |
+|------|-------------|
+| 특정 디바이스에서만 실패 | `platformVersion`, `deviceName` 차이 확인 |
+| 앱 상태 문제 | `noReset`, `fullReset` 설정 확인 |
+| 타임아웃 실패 | `newCommandTimeout` 값 확인 |
+| 권한 문제 | `autoGrantPermissions` 설정 확인 |
+
+**예시**:
+```json
+{
+  "platformName": "Android",
+  "platformVersion": "14",
+  "deviceName": "emulator-5554",
+  "appPackage": "com.gmeremit.online.gmeremittance_native.stag",
+  "automationName": "UiAutomator2",
+  "noReset": true,
+  "newCommandTimeout": 300
+}
+```
+
+---
+
+### 8.3 logcat_*.txt (Android 시스템 로그)
+
+**설명**: 테스트 실행 중 수집된 Android 시스템 로그입니다. 앱 내부 동작과 시스템 수준의 이벤트를 확인할 수 있습니다.
+
+**확인 가능한 정보**:
+
+- **앱 크래시**: `FATAL EXCEPTION`, `java.lang.NullPointerException` 등
+- **ANR(응답 없음)**: `ANR in com.app`, `Input dispatching timed out`
+- **네트워크 오류**: `UnknownHostException`, `SocketTimeoutException`
+- **메모리 문제**: `OutOfMemoryError`, GC 로그
+- **앱 로그**: 개발팀이 남긴 `Log.d()`, `Log.e()` 메시지
+- **시스템 이벤트**: Activity 전환, 서비스 시작/종료
+
+**주요 검색 키워드**:
+
+```
+FATAL           # 앱 크래시
+ANR             # 응답 없음
+Exception       # 예외 발생
+Error           # 에러 로그
+com.gmeremit    # 특정 앱 패키지 로그
+ActivityManager # 액티비티 전환 이벤트
+```
+
+**활용 방법**:
+
+| 상황 | 확인 포인트 |
+|------|-------------|
+| 앱이 갑자기 종료 | `FATAL EXCEPTION` 검색 |
+| 화면 전환 안됨 | `ActivityManager` 로그에서 Activity 전환 확인 |
+| 네트워크 실패 | `Exception` 검색 후 네트워크 관련 에러 확인 |
+| 버튼 클릭 안됨 | ANR 또는 UI 블로킹 로그 확인 |
+
+---
+
+### 8.4 진단 파일 활용 워크플로우
+
+테스트 실패 시 권장하는 분석 순서:
+
+```
+1. 스크린샷 확인
+   └─ 실패 시점의 실제 화면 상태 파악
+
+2. page_source.xml 분석
+   └─ 예상 요소가 있는지, 속성이 맞는지 확인
+
+3. logcat.txt 검색
+   └─ 앱 크래시, ANR, 네트워크 에러 등 확인
+
+4. capabilities.json 검토
+   └─ 환경 설정 문제인지 확인 (타임아웃, 디바이스 등)
+```
+
+**실패 유형별 우선 확인 파일**:
+
+| 실패 유형 | 1순위 | 2순위 | 3순위 |
+|-----------|-------|-------|-------|
+| 요소 못 찾음 | page_source.xml | 스크린샷 | logcat.txt |
+| 앱 크래시 | logcat.txt | 스크린샷 | capabilities.json |
+| 타임아웃 | logcat.txt | capabilities.json | page_source.xml |
+| 잘못된 화면 | 스크린샷 | page_source.xml | logcat.txt |
+
+---
+
+### 8.5 진단 파일 저장 위치
+
+첨부 파일은 Allure 결과 폴더에 저장됩니다:
+
+```
+allure-results/YYYYMMDD_HHMMSS/
+├── *-attachment.xml      # page_source
+├── *-attachment.json     # capabilities
+├── *-attachment.txt      # logcat
+├── *-attachment.png      # screenshot
+└── *-attachment.mp4      # video (녹화 옵션 사용 시)
+```
+
+Allure UI에서는 각 테스트의 **Attachments** 섹션에서 확인할 수 있습니다.
+
+---
+
+## 9) 리포트 HTML Export (공유/보관용)
+
+Allure 리포트를 단일 HTML 파일로 추출하여 공유하거나 보관할 수 있습니다.
+
+### 9.1 Export 방법 비교
+
+| 방법 | 파일 크기 | 특징 | 용도 |
+|------|-----------|------|------|
+| **allure-combine** | ~9 MB | 전체 리포트 (모든 기능 포함) | 완전한 아카이브 |
+| **export_summary.py** | 8~270 KB | 요약 리포트 (핵심 정보만) | 빠른 공유, 이메일 첨부 |
+
+---
+
+### 9.2 allure-combine (전체 리포트)
+
+모든 에셋(JS, CSS, 이미지)을 인라인으로 포함한 단일 HTML 파일을 생성합니다.
+
+**설치:**
+```bash
+pip install allure-combine
+```
+
+**사용법:**
+```bash
+# 기본 사용
+allure-combine allure-reports/20260127_153847
+
+# 출력 경로 지정
+allure-combine allure-reports/20260127_153847 --dest ./export/complete.html
+```
+
+**Python API:**
+```python
+from allure_combine import combine_allure
+
+combine_allure(
+    "allure-reports/20260127_153847",
+    dest_folder="allure-reports/export",
+    auto_create_folders=True
+)
+```
+
+**출력:** `complete.html` (~9 MB)
+
+---
+
+### 9.3 export_summary.py (경량 요약)
+
+핵심 정보만 추출한 경량 HTML을 생성합니다. 스크린샷은 Base64로 인라인 포함됩니다.
+
+**사용법:**
+```bash
+# 스크린샷 포함 (기본)
+python tools/export_summary.py allure-reports/20260127_153847
+
+# 스크린샷 제외 (더 작은 파일)
+python tools/export_summary.py allure-reports/20260127_153847 --no-screenshots
+
+# 출력 경로 지정
+python tools/export_summary.py allure-reports/20260127_153847 -o ./my_report.html
+```
+
+**포함 정보:**
+- 테스트 결과 요약 (Total, Passed, Failed, Broken, Skipped)
+- 실행 시간 (Duration)
+- 환경 정보 (Device, OS, App 등)
+- 테스트 케이스 목록 (상태별 정렬)
+- 실패/깨짐 테스트의 에러 메시지
+- 스크린샷 (옵션, 테스트당 최대 3장)
+
+**출력 크기:**
+- 스크린샷 포함: ~270 KB
+- 스크린샷 제외: ~8 KB
+
+---
+
+### 9.4 Export 파일 저장 위치
+
+```
+allure-reports/
+├── export/
+│   ├── complete.html                          # allure-combine 출력
+│   ├── summary_with_screenshots_*.html        # 스크린샷 포함 요약
+│   └── summary_no_screenshots_*.html          # 스크린샷 제외 요약
+└── 20260127_153847/                           # 원본 리포트
+```
+
+---
+
+### 9.5 용도별 권장 방법
+
+| 용도 | 권장 방법 | 이유 |
+|------|----------|------|
+| 장기 보관/아카이브 | allure-combine | 모든 정보 보존 |
+| 이메일 공유 | export_summary (no-screenshots) | 8 KB로 첨부 제한 없음 |
+| Slack/Teams 공유 | export_summary (with-screenshots) | 270 KB로 적당한 크기 |
+| 상세 디버깅 | 원본 리포트 서버 | 전체 기능 사용 가능 |

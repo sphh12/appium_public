@@ -7,11 +7,13 @@
 ## 설치 및 실행 환경
 
 ### 필수 조건
+
 - Python 가상환경 활성화
 - Appium 서버 실행 중
 - 에뮬레이터 또는 실제 디바이스 연결
 
 ### 가상환경 활성화
+
 ```bash
 # Windows
 venv\Scripts\activate
@@ -23,29 +25,37 @@ source venv/bin/activate
 ## 사용 방법
 
 ### 1. 단일 캡처
+
 현재 화면을 한 번 캡처합니다.
+
 ```bash
 python tools/ui_dump.py
 ```
 
 ### 2. 이름 지정 캡처
+
 파일명에 식별 가능한 이름을 추가합니다.
+
 ```bash
 python tools/ui_dump.py login_screen
 # 결과: ui_dumps/20260123_143022_login_screen.xml
 ```
 
 ### 3. 인터랙티브 모드
+
 수동으로 화면을 탐색하며 원하는 시점에 캡처합니다.
+
 ```bash
 python tools/ui_dump.py -i
 ```
 
 **인터랙티브 모드 조작:**
+
 - `Enter` : 현재 화면 캡처
 - `q` + `Enter` : 종료
 
 ### 4. 자동 감지 모드 (Watch Mode) - 권장
+
 화면 변화를 자동으로 감지하여 캡처합니다. 사용자 플로우를 따라가며 모든 화면을 자동으로 기록할 때 유용합니다.
 
 ```bash
@@ -57,18 +67,21 @@ python tools/ui_dump.py -w 1.0
 ```
 
 **자동 감지 모드 특징:**
+
 - 화면 변화 자동 감지 (MD5 해시 비교)
 - 화면 이름 자동 추출 (screenTitle, activity명, 또는 첫 번째 텍스트)
 - 파일명 형식: `001_ScreenName.xml`, `002_LoginScreen.xml` 등
 - `Ctrl+C`로 종료
 
 **화면 이름 추출 우선순위:**
+
 1. `screenTitle` 또는 `toolbarTitle` 요소의 텍스트
 2. 일반적인 title 패턴의 요소 텍스트
 3. 현재 Activity 이름 (예: `MainActivity` → `Main`)
 4. 첫 번째 의미있는 TextView 텍스트
 
 **출력 예시:**
+
 ```
 감시 시작! 앱에서 화면을 이동해보세요.
 --------------------------------------------------
@@ -92,6 +105,7 @@ python tools/ui_dump.py -w 1.0
 캡처된 XML 파일은 `ui_dumps/` 폴더에 저장됩니다.
 
 ### 단일/이름 지정 캡처
+
 ```
 ui_dumps/
 ├── 20260122_132500.xml              # 단일 캡처
@@ -102,6 +116,7 @@ ui_dumps/
 **파일명 형식:** `YYYYMMDD_HHMMSS_[이름].xml`
 
 ### 인터랙티브 모드 / 자동 감지 모드
+
 세션 단위로 폴더가 생성됩니다. 폴더명은 종료 시점의 타임스탬프입니다.
 
 ```
@@ -118,6 +133,7 @@ ui_dumps/
 ```
 
 **폴더명 형식:**
+
 - 인터랙티브 모드: `YYYYMMDD_HHMMSS` (예: 20260123_150530)
 - Watch 모드: `yymmdd_HHMM` (예: 260123_1505)
 
@@ -129,14 +145,14 @@ ui_dumps/
 
 ### 주요 속성
 
-| 속성 | 설명 | Appium Locator |
-|------|------|----------------|
-| `resource-id` | 요소의 고유 ID | `AppiumBy.ID` |
-| `content-desc` | 접근성 설명 (Accessibility ID) | `AppiumBy.ACCESSIBILITY_ID` |
-| `text` | 표시되는 텍스트 | `AppiumBy.ANDROID_UIAUTOMATOR` |
-| `class` | 요소 클래스명 | `AppiumBy.CLASS_NAME` |
-| `clickable` | 클릭 가능 여부 | - |
-| `bounds` | 요소 위치 [left,top][right,bottom] | - |
+| 속성           | 설명                               | Appium Locator                 |
+| -------------- | ---------------------------------- | ------------------------------ |
+| `resource-id`  | 요소의 고유 ID                     | `AppiumBy.ID`                  |
+| `content-desc` | 접근성 설명 (Accessibility ID)     | `AppiumBy.ACCESSIBILITY_ID`    |
+| `text`         | 표시되는 텍스트                    | `AppiumBy.ANDROID_UIAUTOMATOR` |
+| `class`        | 요소 클래스명                      | `AppiumBy.CLASS_NAME`          |
+| `clickable`    | 클릭 가능 여부                     | -                              |
+| `bounds`       | 요소 위치 [left,top][right,bottom] | -                              |
 
 ### XML 예시
 
@@ -162,39 +178,44 @@ ui_dumps/
 ## 캡처된 화면 분석 (GME Remit 앱)
 
 ### 001.xml - 안드로이드 홈 화면
-| 요소 | content-desc | 용도 |
-|------|--------------|------|
+
+| 요소          | content-desc                                | 용도    |
+| ------------- | ------------------------------------------- | ------- |
 | GME 앱 아이콘 | `GME Remit` 또는 `Predicted app: GME Remit` | 앱 실행 |
 
 ### 002.xml - 앱 메인 화면 (로그인 전)
-| 요소 | resource-id | 용도 |
-|------|-------------|------|
-| Login 버튼 | `btn_lgn` | 로그인 화면 진입 |
-| New User 버튼 | `btn_new_user` | 회원가입 |
+
+| 요소          | resource-id    | 용도             |
+| ------------- | -------------- | ---------------- |
+| Login 버튼    | `btn_lgn`      | 로그인 화면 진입 |
+| New User 버튼 | `btn_new_user` | 회원가입         |
 
 ### 003.xml - 언어 선택 화면
-| 요소 | resource-id | 용도 |
-|------|-------------|------|
-| 언어 목록 | `languageRv` | 언어 선택 RecyclerView |
-| 언어 텍스트 | `countryLanguageText` | English, 한국어 등 |
+
+| 요소        | resource-id           | 용도                   |
+| ----------- | --------------------- | ---------------------- |
+| 언어 목록   | `languageRv`          | 언어 선택 RecyclerView |
+| 언어 텍스트 | `countryLanguageText` | English, 한국어 등     |
 
 ### 004.xml - 약관 동의 화면
-| 요소 | resource-id | 용도 |
-|------|-------------|------|
-| 화면 제목 | `screenTitle` | "Terms And Condition" |
-| 전체 동의 | `agreeAllContainer` | 모든 약관 동의 |
-| 개별 약관 | `term1Container`, `term2Container`, `term3Container` | 개별 동의 |
+
+| 요소      | resource-id                                          | 용도                  |
+| --------- | ---------------------------------------------------- | --------------------- |
+| 화면 제목 | `screenTitle`                                        | "Terms And Condition" |
+| 전체 동의 | `agreeAllContainer`                                  | 모든 약관 동의        |
+| 개별 약관 | `term1Container`, `term2Container`, `term3Container` | 개별 동의             |
 
 ### 005.xml - 로그인 화면
-| 요소 | resource-id | content-desc | 클릭 가능 |
-|------|-------------|--------------|-----------|
-| User ID 입력 | `usernameId` | - | O |
-| Password 입력 | `securityKeyboardEditText` | `********` | O |
-| Login 버튼 | `btn_submit` | - | O |
-| Find my User ID | `tvFindUserId` | - | O |
-| Forgot Password | `tv_forgotpass` | - | O |
-| Register Here | `register` | - | O |
-| Customer Support | `ivChannelTalk` | `Customer Support` | O |
+
+| 요소             | resource-id                | content-desc       | 클릭 가능 |
+| ---------------- | -------------------------- | ------------------ | --------- |
+| User ID 입력     | `usernameId`               | -                  | O         |
+| Password 입력    | `securityKeyboardEditText` | `********`         | O         |
+| Login 버튼       | `btn_submit`               | -                  | O         |
+| Find my User ID  | `tvFindUserId`             | -                  | O         |
+| Forgot Password  | `tv_forgotpass`            | -                  | O         |
+| Register Here    | `register`                 | -                  | O         |
+| Customer Support | `ivChannelTalk`            | `Customer Support` | O         |
 
 ---
 
@@ -203,13 +224,13 @@ ui_dumps/
 ### 우선순위
 
 1. **Accessibility ID (`content-desc`)** - 권장
-   - 크로스 플랫폼 호환성
-   - 언어/지역 독립적
-   - 유지보수 용이
+    - 크로스 플랫폼 호환성
+    - 언어/지역 독립적
+    - 유지보수 용이
 
 2. **Resource ID (`resource-id`)** - Fallback
-   - Android 전용
-   - 패키지명에 의존적
+    - Android 전용
+    - 패키지명에 의존적
 
 ### 코드 예시
 
@@ -311,25 +332,33 @@ def _handle_initial_screens(self, driver):
 ## 팁 & 트러블슈팅
 
 ### 1. Appium 모듈 에러
+
 ```
 ModuleNotFoundError: No module named 'appium'
 ```
+
 **해결:** 가상환경 활성화 필요
+
 ```bash
 venv\Scripts\activate
 ```
 
 ### 2. 요소를 찾을 수 없음
+
 - `ui_dump.py`로 현재 화면 캡처하여 실제 요소 확인
 - `resource-id`가 빌드 환경(stag/prod)에 따라 다를 수 있음
 
 ### 3. content-desc가 없는 경우
+
 대부분의 앱에서 `content-desc`가 제대로 설정되어 있지 않음
+
 - 개발팀에 접근성 속성 추가 요청
 - `resource-id` 또는 `text` 기반 locator 사용
 
 ### 4. 동적 요소 처리
+
 화면 로딩 후 요소가 나타나는 경우 `WebDriverWait` 사용:
+
 ```python
 element = WebDriverWait(driver, 10).until(
     EC.presence_of_element_located((AppiumBy.ID, "element_id"))
@@ -340,12 +369,12 @@ element = WebDriverWait(driver, 10).until(
 
 ## 관련 파일
 
-| 파일 | 설명 |
-|------|------|
-| `tools/ui_dump.py` | UI 덤프 도구 |
-| `ui_dumps/*.xml` | 캡처된 XML 파일들 |
-| `tests/android/xml_test.py` | XML 기반 테스트 스크립트 |
-| `tests/android/basic_01_test.py` | XML 덤프 기반 기본 테스트 |
-| `utils/initial_screens.py` | 초기 화면 처리 유틸리티 |
-| `conftest.py` | pytest fixture (초기 화면 자동 처리 포함) |
-| `docs/CODING_GUIDELINES.md` | 테스트 스크립트 작성 가이드라인 |
+| 파일                             | 설명                                      |
+| -------------------------------- | ----------------------------------------- |
+| `tools/ui_dump.py`               | UI 덤프 도구                              |
+| `ui_dumps/*.xml`                 | 캡처된 XML 파일들                         |
+| `tests/android/xml_test.py`      | XML 기반 테스트 스크립트                  |
+| `tests/android/basic_01_test.py` | XML 덤프 기반 기본 테스트                 |
+| `utils/initial_screens.py`       | 초기 화면 처리 유틸리티                   |
+| `conftest.py`                    | pytest fixture (초기 화면 자동 처리 포함) |
+| `docs/CODING_GUIDELINES.md`      | 테스트 스크립트 작성 가이드라인           |

@@ -5,6 +5,7 @@
 #
 # Options:
 #   --platform    : android or ios (default: android)
+#   --app         : path to APK or IPA file
 #   --test        : specific test to run (e.g., test_Login)
 #   --files       : space-separated test paths to run in order (quote the value)
 #   --all         : run all tests
@@ -16,6 +17,7 @@
 PLATFORM="android"
 TEST_NAME=""
 TEST_FILES=""
+APP_PATH=""
 OPEN_REPORT=false
 RUN_ALL=false
 GENERATE_REPORT=false
@@ -67,11 +69,16 @@ while [[ $# -gt 0 ]]; do
             AUTO_START=false
             shift
             ;;
+        --app)
+            APP_PATH="$2"
+            shift 2
+            ;;
         --help)
             echo "Usage: ./shell/run-app.sh [options]"
             echo ""
             echo "Options:"
             echo "  --platform <android|ios>  Set test platform (default: android)"
+            echo "  --app <path>              Path to APK or IPA file"
             echo "  --test <test_name>        Run specific test (e.g., test_Login)"
             echo "  --files \"<paths...>\"     Run specific test files in given order"
             echo "  --<file>                  Shorthand for tests/<platform>/<file>.py (e.g., --xml_test or --gme1_test)"
@@ -84,6 +91,7 @@ while [[ $# -gt 0 ]]; do
             echo ""
             echo "Examples:"
             echo "  ./shell/run-app.sh --test test_Login"
+            echo "  ./shell/run-app.sh --app apk/[Stg]GME_7.13.0.apk --test test_Login"
             echo "  ./shell/run-app.sh --files \"tests/android/gme1_test.py tests/android/xml_test.py\"";
             echo "  ./shell/run-app.sh --xml_test"
             echo "  ./shell/run-app.sh --gme1_test --test test_Login"
@@ -402,11 +410,22 @@ fi
 
 CMD="python -m pytest $TARGET -v --platform=$PLATFORM --alluredir=$RESULTS_DIR --record-video --allure-attach=hybrid"
 
+if [[ -n "$APP_PATH" ]]; then
+    # Convert MINGW path to Windows path if needed
+    if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
+        APP_PATH=$(cygpath -w "$APP_PATH" 2>/dev/null || echo "$APP_PATH")
+    fi
+    CMD="$CMD --app=$APP_PATH"
+fi
+
 if [[ "$RUN_ALL" == false && -n "$TEST_NAME" ]]; then
     CMD="$CMD -k $TEST_NAME"
 fi
 
 echo "  Platform: $PLATFORM"
+if [[ -n "$APP_PATH" ]]; then
+    echo "  App:      $APP_PATH"
+fi
 if [[ -n "$TEST_FILES" ]]; then
     echo "  Files:    $TEST_FILES"
 else
