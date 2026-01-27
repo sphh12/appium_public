@@ -165,12 +165,12 @@ pip list | grep -i appium
 
 ### APK 파일
 
-- APK 파일은 Git LFS로 관리됩니다.
-- 클론 후 APK가 제대로 받아지지 않으면:
-  ```bash
-  git lfs install
-  git lfs pull
-  ```
+- **APK 파일은 Git 저장소에 포함되지 않습니다** (용량 문제로 `.gitignore`에서 제외)
+- 프로젝트 클론 후 APK 파일을 별도로 준비해야 합니다:
+  1. 팀 내부 공유 폴더 또는 CI/CD 빌드 산출물에서 APK 파일 다운로드
+  2. 프로젝트 루트에 `apk/` 폴더 생성 (없는 경우)
+  3. APK 파일을 `apk/` 폴더에 복사
+- 예상 파일 경로: `apk/[Stg]GME_x.x.x.apk`
 
 ### 에뮬레이터 이름
 
@@ -329,7 +329,7 @@ appium/
 │   └── ios/                # iOS 테스트
 ├── shell/
 │   └── run-app.sh          # 테스트 실행 스크립트
-├── apk/                    # APK 파일 (Git LFS)
+├── apk/                    # APK 파일 (Git 미포함, 별도 준비 필요)
 ├── pdf/                    # 가이드 문서
 ├── conftest.py             # pytest 설정
 ├── requirements.txt        # Python 패키지
@@ -427,8 +427,9 @@ App not found at path / The application at ... does not exist
 **원인:** APK 파일 경로가 잘못되었거나 파일이 없음
 **해결:**
 
-1. `apk/` 폴더에 APK 파일이 있는지 확인
-2. Git LFS로 파일 다운로드: `git lfs pull`
+1. `apk/` 폴더가 존재하는지 확인 (없으면 생성)
+2. APK 파일이 `apk/` 폴더에 있는지 확인
+3. APK 파일이 없으면 팀 내부 공유 폴더 또는 CI/CD에서 다운로드
 
 ### 요소를 찾을 수 없음
 
