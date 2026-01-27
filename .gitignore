@@ -35,7 +35,10 @@ Thumbs.db
 # Logs
 *.log
 
-# APK files are tracked with Git LFS
+# APK files
+apk/
+*.apk
+*.apk+
 
 # PDF files (generated)
 *.pdf
