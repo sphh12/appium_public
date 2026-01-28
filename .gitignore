@@ -1,0 +1,59 @@
+# Python
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Node.js
+node_modules/
+package-lock.json
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.history/
+
+# Test results
+reports/
+allure-results/
+allure-report/
+allure-reports/
+*.html
+!templates/*.html
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# APK/IPA files (add your app files locally, don't commit)
+apk/
+*.apk
+*.apk+
+*.ipa
+
+# PDF files (generated)
+*.pdf
+
+# UI dumps (may contain sensitive data)
+ui_dumps/
+
+# Appium Inspector session files (contains user-specific paths)
+*.appiumsession
+
+# Environment files (may contain credentials)
+.env
+.env.local
+.env.*.local
+
+# Local configuration
+.claude/
