@@ -8,6 +8,9 @@ UI 요소 덤프 스크립트
 예시:
     python tools/ui_dump.py login_screen
     python tools/ui_dump.py home
+
+참고:
+    - 저장 시 민감 정보(전화번호, 이메일, 생년월일)가 자동으로 마스킹됩니다.
 """
 
 import os
@@ -26,6 +29,90 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
 
 from config.capabilities import ANDROID_CAPS, get_appium_server_url
+
+
+# =============================================================================
+# 민감 정보 마스킹 기능
+# =============================================================================
+
+def _mask_sensitive_data(xml_content: str) -> str:
+    """
+    XML 내용에서 민감한 개인정보를 마스킹합니다.
+
+    마스킹 대상:
+    - 전화번호 (한국 형식)
+    - 이메일 주소
+    - 생년월일 (YYYY-MM-DD, YYYYMMDD 형식)
+
+    Args:
+        xml_content: 원본 XML 문자열
+
+    Returns:
+        마스킹된 XML 문자열
+    """
+    import re
+
+    masked = xml_content
+
+    # 1. 전화번호 마스킹 (다양한 한국 전화번호 형식)
+    # 010-1234-5678, 01012345678, 010 1234 5678, 019-555-9999 등
+    phone_patterns = [
+        # 하이픈 포함: 010-1234-5678, 02-123-4567
+        (r'(\d{2,3})-(\d{3,4})-(\d{4})', r'\1-****-****'),
+        # 공백 포함: 010 1234 5678
+        (r'(\d{2,3})\s(\d{3,4})\s(\d{4})', r'\1-****-****'),
+        # 연속 숫자 (10-11자리 휴대폰): 01012345678
+        (r'(?<!\d)(01[0-9])(\d{3,4})(\d{4})(?!\d)', r'\1********'),
+        # 연속 숫자 (지역번호 포함): 0212345678
+        (r'(?<!\d)(0[2-6][0-9]?)(\d{3,4})(\d{4})(?!\d)', r'\1*******'),
+    ]
+
+    for pattern, replacement in phone_patterns:
+        masked = re.sub(pattern, replacement, masked)
+
+    # 2. 이메일 마스킹
+    # user@domain.com -> u***@d***.com
+    def mask_email(match):
+        email = match.group(0)
+        local, domain = email.split('@')
+        domain_parts = domain.split('.')
+
+        # 로컬 파트 마스킹 (첫 글자만 표시)
+        if len(local) > 1:
+            masked_local = local[0] + '***'
+        else:
+            masked_local = '***'
+
+        # 도메인 마스킹 (첫 글자만 표시)
+        if len(domain_parts[0]) > 1:
+            masked_domain = domain_parts[0][0] + '***'
+        else:
+            masked_domain = '***'
+
+        # TLD는 유지
+        return f"{masked_local}@{masked_domain}.{'.'.join(domain_parts[1:])}"
+
+    email_pattern = r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
+    masked = re.sub(email_pattern, mask_email, masked)
+
+    # 3. 생년월일 마스킹 (YYYY-MM-DD 형식)
+    # 1990-01-15 -> ****-**-**
+    date_pattern = r'(?<!\d)(19|20)\d{2}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])(?!\d)'
+    masked = re.sub(date_pattern, '****-**-**', masked)
+
+    # 4. 생년월일 마스킹 (YYYYMMDD 형식, 8자리 연속)
+    # 19900115 -> ********
+    date_pattern2 = r'(?<!\d)(19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])(?!\d)'
+    masked = re.sub(date_pattern2, '********', masked)
+
+    return masked
+
+
+def _save_xml_with_masking(filepath: str, content: str) -> None:
+    """XML 파일을 마스킹하여 저장합니다."""
+    masked_content = _mask_sensitive_data(content)
+    with open(filepath, "w", encoding="utf-8") as f:
+        f.write(masked_content)
 
 
 def _ensure_unique_dir(path: str) -> str:
@@ -121,9 +208,8 @@ def dump_ui(name: str = None):
         print(f"[2/3] 화면 요소 추출 중...")
         page_source = driver.page_source
 
-        print(f"[3/3] XML 파일 저장 중... ({filepath})")
-        with open(filepath, "w", encoding="utf-8") as f:
-            f.write(page_source)
+        print(f"[3/3] XML 파일 저장 중 (마스킹 적용)... ({filepath})")
+        _save_xml_with_masking(filepath, page_source)
 
         print()
         print("=" * 50)
@@ -253,11 +339,10 @@ def interactive_mode():
             try:
                 page_source = driver.page_source
 
-                with open(filepath, "w", encoding="utf-8") as f:
-                    f.write(page_source)
+                # 마스킹 적용하여 저장
+                _save_xml_with_masking(filepath, page_source)
 
                 # 요소 통계
-                import xml.etree.ElementTree as ET
                 root = ET.fromstring(page_source)
                 element_count = len(list(root.iter()))
                 clickable_count = len([e for e in root.iter() if e.get("clickable") == "true"])
@@ -457,8 +542,8 @@ def watch_mode(interval: float = 0.2):
                         filename = f"{capture_count:03d}_{screen_name}.xml"
                         filepath = os.path.join(session_tmp_dir, filename)
 
-                        with open(filepath, "w", encoding="utf-8") as f:
-                            f.write(page_source)
+                        # 마스킹 적용하여 저장
+                        _save_xml_with_masking(filepath, page_source)
 
                         # 요소 통계
                         root = ET.fromstring(page_source)
@@ -505,9 +590,54 @@ def watch_mode(interval: float = 0.2):
                 print(f"  - {name}")
 
 
+def mask_existing_dumps():
+    """
+    기존에 저장된 ui_dumps 파일들을 마스킹 처리합니다.
+    """
+    output_dir = os.path.join(PROJECT_ROOT, "ui_dumps")
+
+    if not os.path.exists(output_dir):
+        print("ui_dumps 폴더가 없습니다.")
+        return
+
+    print("=" * 50)
+    print("  기존 UI 덤프 파일 마스킹")
+    print("=" * 50)
+    print()
+
+    masked_count = 0
+
+    # 모든 XML 파일 찾기
+    for root_dir, dirs, files in os.walk(output_dir):
+        for filename in files:
+            if filename.endswith(".xml"):
+                filepath = os.path.join(root_dir, filename)
+                try:
+                    with open(filepath, "r", encoding="utf-8") as f:
+                        original = f.read()
+
+                    masked = _mask_sensitive_data(original)
+
+                    # 변경된 경우에만 저장
+                    if original != masked:
+                        with open(filepath, "w", encoding="utf-8") as f:
+                            f.write(masked)
+                        rel_path = os.path.relpath(filepath, output_dir)
+                        print(f"  [마스킹] {rel_path}")
+                        masked_count += 1
+
+                except Exception as e:
+                    print(f"  [오류] {filepath}: {e}")
+
+    print()
+    print(f"총 {masked_count}개 파일 마스킹 완료")
+
+
 if __name__ == "__main__":
     if len(sys.argv) > 1:
-        if sys.argv[1] == "--list":
+        if sys.argv[1] == "--mask-existing":
+            mask_existing_dumps()
+        elif sys.argv[1] == "--list":
             list_dumps()
         elif sys.argv[1] == "-i" or sys.argv[1] == "--interactive":
             interactive_mode()
@@ -528,6 +658,7 @@ if __name__ == "__main__":
             print("  -i, --interactive  인터랙티브 모드 (Enter로 캡처, q로 종료)")
             print("  -w, --watch [초]   자동 감지 모드 (화면 변화 자동 캡처, 기본 0.2초)")
             print("  --list             저장된 덤프 파일 목록 표시")
+            print("  --mask-existing    기존 덤프 파일들을 마스킹 처리")
             print("  --help             도움말 표시")
             print()
             print("예시:")
@@ -536,6 +667,12 @@ if __name__ == "__main__":
             print("  python tools/ui_dump.py -i               # 인터랙티브 모드")
             print("  python tools/ui_dump.py -w               # 자동 감지 모드 (0.2초 간격)")
             print("  python tools/ui_dump.py -w 1.0           # 자동 감지 모드 (1초 간격)")
+            print()
+            print("참고:")
+            print("  - 저장 시 민감 정보가 자동으로 마스킹됩니다:")
+            print("    전화번호: 010-1234-5678 -> 010-****-****")
+            print("    이메일: user@mail.com -> u***@m***.com")
+            print("    생년월일: 1990-01-15 -> ****-**-**")
         else:
             dump_ui(sys.argv[1])
     else:
