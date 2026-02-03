@@ -334,7 +334,7 @@ python -m http.server 8000
   "platformName": "Android",
   "platformVersion": "14",
   "deviceName": "emulator-5554",
-  "appPackage": "com.example.app",
+  "appPackage": "com.gmeremit.online.gmeremittance_native.stag",
   "automationName": "UiAutomator2",
   "noReset": true,
   "newCommandTimeout": 300
@@ -363,7 +363,7 @@ FATAL           # 앱 크래시
 ANR             # 응답 없음
 Exception       # 예외 발생
 Error           # 에러 로그
-com.example    # 특정 앱 패키지 로그
+com.gmeremit    # 특정 앱 패키지 로그
 ActivityManager # 액티비티 전환 이벤트
 ```
 

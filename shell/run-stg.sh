@@ -1,9 +1,9 @@
 #!/bin/bash
-# Staging 환경용 테스트 실행 스크립트
-# 사용법: ./shell/run-stg.sh [옵션]
+
+# Run tests with Staging APK
+# Delegates to the main runner with --app option
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-APK_PATH="$SCRIPT_DIR/../apk/your_staging_app.apk"
+APK_PATH="$SCRIPT_DIR/../apk/[Stg]GME_7.13.0.apk"
 
-# run-app.sh에 APK 경로 전달
-"$SCRIPT_DIR/run-app.sh" --app "$APK_PATH" "$@"
+exec "$SCRIPT_DIR/run-app.sh" --app "$APK_PATH" "$@"

@@ -1,3 +1,9 @@
+# Environment variables (민감정보)
+.env
+.env.local
+.env.*.local
+!.env.example
+
 # Python
 venv/
 __pycache__/
@@ -35,25 +41,13 @@ Thumbs.db
 # Logs
 *.log
 
-# APK/IPA files (add your app files locally, don't commit)
+# APK files
 apk/
 *.apk
 *.apk+
-*.ipa
 
 # PDF files (generated)
 *.pdf
 
-# UI dumps (may contain sensitive data)
-ui_dumps/
-
 # Appium Inspector session files (contains user-specific paths)
 *.appiumsession
-
-# Environment files (may contain credentials)
-.env
-.env.local
-.env.*.local
-
-# Local configuration
-.claude/

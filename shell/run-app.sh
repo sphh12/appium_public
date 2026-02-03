@@ -81,7 +81,7 @@ while [[ $# -gt 0 ]]; do
             echo "  --app <path>              Path to APK or IPA file"
             echo "  --test <test_name>        Run specific test (e.g., test_Login)"
             echo "  --files \"<paths...>\"     Run specific test files in given order"
-            echo "  --<file>                  Shorthand for tests/<platform>/<file>.py (e.g., --sample)"
+            echo "  --<file>                  Shorthand for tests/<platform>/<file>.py (e.g., --xml_test or --gme1_test)"
             echo "  --all                     Run all tests"
             echo "  --report                  Open allure report after test (requires server)"
             echo "  --generate                Generate HTML report to allure-report folder"
@@ -91,8 +91,10 @@ while [[ $# -gt 0 ]]; do
             echo ""
             echo "Examples:"
             echo "  ./shell/run-app.sh --test test_Login"
-            echo "  ./shell/run-app.sh --app apk/your_app.apk --test test_Login"
-            echo "  ./shell/run-app.sh --files \"tests/android/test_sample.py\"";
+            echo "  ./shell/run-app.sh --app apk/[Stg]GME_7.13.0.apk --test test_Login"
+            echo "  ./shell/run-app.sh --files \"tests/android/gme1_test.py tests/android/xml_test.py\"";
+            echo "  ./shell/run-app.sh --xml_test"
+            echo "  ./shell/run-app.sh --gme1_test --test test_Login"
             echo "  ./shell/run-app.sh --all --report"
             echo "  ./shell/run-app.sh --test test_Login --generate"
             exit 0
@@ -393,7 +395,7 @@ if [[ -f "$LATEST_FILE" ]]; then
 fi
 
 # Build pytest command
-DEFAULT_TARGET="tests/android/sample/"
+DEFAULT_TARGET="tests/android/gme1_test.py"
 if [[ "$PLATFORM" == "ios" ]]; then
     DEFAULT_TARGET="tests/ios"
 fi

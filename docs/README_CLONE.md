@@ -6,13 +6,13 @@
 
 ## 1) Clone
 
-저장소를 클론합니다.
+재현 가능한 실행 환경을 목표로 하면 `home` 브랜치를 권장합니다.
 
 - SSH (권장)
-  - `git clone git@github.com:<username>/appium_public.git`
+  - `git clone -b home --single-branch git@gitlab.com:sphh12/appium.git`
 
-- HTTPS
-  - `git clone https://github.com/<username>/appium_public.git`
+- HTTPS (회사 정책 등으로 SSH가 어려운 경우)
+  - `git clone -b home --single-branch https://gitlab.com/sphh12/appium.git`
 
 ---
 

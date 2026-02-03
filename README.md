@@ -1,195 +1,290 @@
-# Appium Mobile Test Framework
-
-모바일 앱 자동화 테스트 프레임워크 (Android/iOS)
+# Appium Mobile Test
 
 ## Overview
 
-Appium 기반 모바일 앱 테스트 자동화 프레임워크입니다.
-- **Pytest** 기반 테스트 실행
-- **Allure** 리포트 생성
-- **Page Object Model** 패턴 적용
-- Android/iOS 크로스 플랫폼 지원
+GME Remittance 앱의 E2E 자동화 테스트 프로젝트입니다.
+Appium + Python 기반으로 Android/iOS 핵심 시나리오를 자동 검증합니다.
 
-## Tech Stack
+### Tech Stack
 
-| 구분 | 기술 |
+| 기술 | 버전 |
 |------|------|
-| 테스트 프레임워크 | Pytest |
-| 모바일 자동화 | Appium 2.x, UiAutomator2 (Android), XCUITest (iOS) |
-| 리포트 | Allure Report |
-| 언어 | Python 3.10+ |
+| Python | 3.10+ |
+| Node.js | 18+ |
+| Appium | 2.x |
+| Pytest | 7.x |
+| Allure Report | 2.x |
+
+---
 
 ## Quick Start
 
-### 1. 환경 설정
-
 ```bash
-# 저장소 클론
-git clone <repository-url>
-cd appium-mobile-test
+# 1. 저장소 클론
+git clone https://gitlab.com/sphh12/appium.git
+cd appium
 
-# 가상환경 생성 및 활성화
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-
-# 의존성 설치
+# 2. 의존성 설치
+npm install
 pip install -r requirements.txt
+
+# 3. Appium 드라이버 설치
+npx appium driver install uiautomator2
+
+# 4. 테스트 실행 (Git Bash에서)
+./run-app.sh --gme1_test
 ```
 
-### 2. Appium 서버 실행
+> 처음 설정하는 경우 [상세 설치 가이드](#설치-방법)를 참고하세요.
+
+---
+
+## 테스트 실행
+
+### Shell 스크립트 (권장)
 
 ```bash
-# Appium 설치 (최초 1회)
-npm install -g appium
-appium driver install uiautomator2
+# 단일 테스트 파일 실행
+./run-app.sh --gme1_test
+./run-app.sh --xml_test
 
-# 서버 실행
-appium
+# 특정 테스트만 실행
+./run-app.sh --gme1_test --test test_Login
+
+# 여러 파일 실행
+./run-app.sh --files "tests/android/gme1_test.py tests/android/xml_test.py"
+
+# 전체 테스트 + Allure 리포트
+./run-app.sh --all --report
 ```
 
-### 3. 앱 파일 배치
+스크립트가 자동으로 처리하는 것:
+- Appium 서버 시작
+- 에뮬레이터 연결
+- Python 가상환경 활성화
+- 테스트 실행
+
+### 수동 실행
 
 ```bash
-# apk 폴더 생성 및 앱 파일 복사
-mkdir apk
-cp /path/to/your_app.apk apk/
+# 터미널 1: Appium 서버
+npm run appium:start
+
+# 터미널 2: 에뮬레이터
+emulator -avd Pixel_6
+
+# 터미널 3: 테스트
+.\venv\Scripts\activate
+pytest tests/android/gme1_test.py -v --platform=android
 ```
 
-### 4. 설정 파일 수정
-
-`config/capabilities.py`에서 앱 경로 수정:
-```python
-ANDROID_CAPS = {
-    ...
-    "app": os.path.join(PROJECT_ROOT, "apk", "your_app.apk"),
-    ...
-}
-```
-
-### 5. 테스트 실행
-
-```bash
-# 기본 실행
-pytest tests/android/sample/
-
-# Allure 리포트와 함께 실행
-pytest tests/android/sample/ --alluredir=allure-results
-allure serve allure-results
-```
+---
 
 ## 프로젝트 구조
 
 ```
-appium-mobile-test/
-├── apk/                    # APK/IPA 파일 (gitignore)
+appium/
 ├── config/
-│   └── capabilities.py     # Appium 설정
-├── docs/                   # 문서
-├── pages/                  # Page Object 클래스
-├── shell/                  # 실행 스크립트
+│   └── capabilities.py      # 디바이스 설정
+├── pages/
+│   ├── base_page.py         # 공통 페이지 기능
+│   └── sample_page.py       # 페이지 객체
 ├── tests/
-│   ├── android/           # Android 테스트
-│   └── ios/               # iOS 테스트
-├── tools/                  # 유틸리티 도구
-├── utils/                  # 헬퍼 함수
-├── conftest.py            # Pytest fixtures
-├── pytest.ini             # Pytest 설정
-└── requirements.txt       # Python 의존성
+│   ├── android/             # Android 테스트
+│   │   ├── gme1_test.py     # 메인 테스트
+│   │   └── xml_test.py      # XML 시나리오 테스트
+│   └── ios/                 # iOS 테스트
+├── tools/
+│   └── run_allure.py        # Allure 리포트 생성
+├── shell/
+│   └── run-app.sh           # 테스트 실행 스크립트
+├── apk/                     # APK 파일 (Git 미포함)
+├── conftest.py              # pytest 설정
+├── requirements.txt         # Python 패키지
+└── package.json             # Node.js 패키지
 ```
 
-## 환경변수 설정
+---
 
-테스트 계정 정보는 환경변수로 설정하세요:
+## 사용 예시
+
+### 테스트 코드 작성
+
+```python
+# tests/android/sample_test.py
+import pytest
+from pages.login_page import LoginPage
+
+@pytest.mark.android
+def test_login(driver):
+    login_page = LoginPage(driver)
+    login_page.enter_credentials("user@test.com", "password123")
+    login_page.tap_login_button()
+    assert login_page.is_logged_in()
+```
+
+### XML 기반 시나리오 테스트
+
+```python
+# XML 파일에서 시나리오 로드
+./run-app.sh --xml_test
+```
+
+---
+
+## 환경 설정
+
+### APK 파일
+
+APK 파일은 Git에 포함되지 않습니다. 별도로 준비해야 합니다:
+
+1. 팀 공유 폴더 또는 CI/CD에서 APK 다운로드
+2. `apk/` 폴더에 복사
+3. 예: `apk/[Stg]GME_7.13.0.apk`
+
+### 환경 변수
+
+| 변수명 | 값 (예시) |
+|--------|----------|
+| `JAVA_HOME` | `C:\Program Files\Eclipse Adoptium\jdk-17` |
+| `ANDROID_HOME` | `C:\Users\{사용자명}\AppData\Local\Android\Sdk` |
+
+PATH에 추가:
+```
+%JAVA_HOME%\bin
+%ANDROID_HOME%\platform-tools
+%ANDROID_HOME%\emulator
+```
+
+### Capabilities 설정
+
+```json
+{
+  "platformName": "Android",
+  "appium:automationName": "UiAutomator2",
+  "appium:deviceName": "Android Emulator",
+  "appium:platformVersion": "14",
+  "appium:app": "./apk/[Stg]GME_7.13.0.apk",
+  "appium:noReset": false,
+  "appium:autoGrantPermissions": true
+}
+```
+
+---
+
+## Allure 리포트
+
+### 설치 (최초 1회)
 
 ```bash
-# PowerShell
-$env:TEST_USERNAME = "your_username"
-$env:TEST_PIN = "your_pin"
-$env:RESOURCE_ID_PREFIX = "com.example.app:id"
-
-# Bash
-export TEST_USERNAME="your_username"
-export TEST_PIN="your_pin"
-export RESOURCE_ID_PREFIX="com.example.app:id"
+# Windows
+scoop install allure
+# 또는
+choco install allure
 ```
 
-실물 디바이스 연결 시:
-```bash
-$env:ANDROID_UDID = "device_serial"  # adb devices로 확인
-```
-
-## 주요 도구
-
-### UI Dump (`tools/ui_dump.py`)
-
-앱 화면의 UI 요소를 XML로 저장:
+### 리포트 생성
 
 ```bash
-# 현재 화면 캡처
-python tools/ui_dump.py
+# 테스트 실행 + 리포트 생성
+python tools/run_allure.py -- tests/android/gme1_test.py -v --platform=android
 
-# Watch 모드 (화면 변화 자동 감지)
-python tools/ui_dump.py -w
+# 리포트 열기
+allure serve allure-results
 ```
 
-### Allure 대시보드
+### 대시보드
 
-테스트 실행 이력 대시보드:
+실행 이력을 `allure-reports/YYYYMMDD_HHMMSS/` 형태로 보관합니다.
 
 ```bash
 # 대시보드 서버 실행
-python tools/serve.py
+python -m http.server 8000
+
+# 브라우저에서 접속
+# http://127.0.0.1:8000/allure-reports/dashboard/
 ```
 
-## 테스트 작성 가이드
+상세 가이드: [docs/ALLURE_REPORT_GUIDE.md](docs/ALLURE_REPORT_GUIDE.md)
 
-### Page Object 패턴
+---
 
-```python
-# pages/login_page.py
-from pages.base_page import BasePage
-from appium.webdriver.common.appiumby import AppiumBy
+## 설치 방법
 
-class LoginPage(BasePage):
-    USERNAME_FIELD = (AppiumBy.ID, "com.example.app:id/username")
-    PASSWORD_FIELD = (AppiumBy.ID, "com.example.app:id/password")
-    LOGIN_BUTTON = (AppiumBy.ID, "com.example.app:id/login_btn")
+> 빠른 클론 가이드: [docs/README_CLONE.md](docs/README_CLONE.md)
 
-    def login(self, username: str, password: str):
-        self.input_text(self.USERNAME_FIELD, username)
-        self.input_text(self.PASSWORD_FIELD, password)
-        self.click(self.LOGIN_BUTTON)
-```
+### 필수 프로그램
 
-### 테스트 작성
+| 프로그램 | 다운로드 |
+|----------|----------|
+| Node.js 18+ | https://nodejs.org/ |
+| Python 3.10+ | https://www.python.org/downloads/ |
+| Java JDK 17 | https://adoptium.net/ |
+| Android Studio | https://developer.android.com/studio |
+| Git | https://git-scm.com/ |
 
-```python
-# tests/android/test_login.py
-import pytest
-import allure
+### 설치 순서
 
-@allure.feature("로그인")
-class TestLogin:
-    @allure.story("정상 로그인")
-    def test_login_success(self, android_driver):
-        login_page = LoginPage(android_driver)
-        login_page.login("user@test.com", "password123")
-        # assertions...
-```
+1. **필수 프로그램 설치** (위 표 참고)
+
+2. **환경 변수 설정**
+   - `JAVA_HOME`, `ANDROID_HOME` 설정
+   - PATH에 bin 경로들 추가
+
+3. **Android 에뮬레이터 생성**
+   - Android Studio → Tools → Device Manager
+   - Pixel 6 + API 34 권장
+
+4. **프로젝트 설정**
+   ```bash
+   git clone https://gitlab.com/sphh12/appium.git
+   cd appium
+   npm install
+   npx appium driver install uiautomator2
+   python -m venv venv
+   .\venv\Scripts\activate  # Windows
+   pip install -r requirements.txt
+   ```
+
+5. **설치 확인**
+   ```bash
+   npx appium --version
+   npx appium driver list --installed
+   ```
+
+---
 
 ## 문제 해결
 
-| 문제 | 해결 방법 |
-|------|----------|
-| Appium 서버 연결 실패 | `appium` 실행 확인, 포트 4723 확인 |
-| 에뮬레이터 연결 실패 | `adb devices`로 연결 상태 확인 |
-| 앱 설치 실패 | APK 경로 확인, 서명 상태 확인 |
-| 요소 찾기 실패 | `ui_dump.py`로 실제 요소 확인 |
+| 에러 | 원인 | 해결 |
+|------|------|------|
+| `ConnectionRefusedError` | Appium 서버 미실행 | `npm run appium:start` |
+| `No device found` | 에뮬레이터 미연결 | `adb devices`로 확인, 에뮬레이터 시작 |
+| `App not found` | APK 파일 없음 | `apk/` 폴더에 APK 복사 |
+| `NoSuchElementException` | Locator 오류 | Appium Inspector로 확인 |
+| `command not found` (Windows) | PowerShell에서 실행 | Git Bash 사용 |
+| `JAVA_HOME is not set` | 환경 변수 미설정 | 시스템 환경 변수에 추가 |
 
-## 라이선스
+---
 
-MIT License
+## Appium Inspector
 
-## 기여
+UI 요소를 탐색하는 도구입니다.
 
-Pull Request를 환영합니다.
+**다운로드:** https://github.com/appium/appium-inspector/releases
+
+**설정:**
+| 항목 | 값 |
+|------|-----|
+| Remote Host | `127.0.0.1` |
+| Remote Port | `4723` |
+| Remote Path | `/` |
+
+---
+
+## 참고 링크
+
+- [Appium 공식 문서](https://appium.io/docs/en/latest/)
+- [Appium Inspector](https://github.com/appium/appium-inspector/releases)
+- [Pytest 문서](https://docs.pytest.org/)
+- [Allure Report](https://docs.qameta.io/allure/)

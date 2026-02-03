@@ -4,9 +4,11 @@ This module centralizes repeatable flows like navigating to the login screen and
 performing login so that new tests can start from a logged-in state.
 
 환경변수 설정:
-  - TEST_USERNAME: 테스트 사용자 ID
-  - TEST_PIN: 테스트 사용자 PIN
-  - RESOURCE_ID_PREFIX: 앱의 resource-id 접두사 (예: com.example.app:id)
+  - GME_TEST_USERNAME: 테스트 사용자 ID
+  - GME_TEST_PIN: 테스트 사용자 PIN
+  - GME_RESOURCE_ID_PREFIX: 앱의 resource-id 접두사
+
+.env 파일 또는 환경변수로 설정하세요.
 """
 
 from __future__ import annotations
@@ -19,7 +21,10 @@ from appium.webdriver.common.appiumby import AppiumBy  # type: ignore
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
+from dotenv import load_dotenv
 
+# 환경변수 로드 (.env 파일)
+load_dotenv()
 
 try:
     import allure  # type: ignore
@@ -27,14 +32,15 @@ except Exception:  # pragma: no cover
     allure = None
 
 
-# 환경변수에서 설정 로드 (기본값은 예시)
+# 환경변수에서 설정 로드
 DEFAULT_RESOURCE_ID_PREFIX = os.getenv(
-    "RESOURCE_ID_PREFIX",
-    "com.example.app:id",  # 실제 앱의 패키지명으로 변경하세요
+    "GME_RESOURCE_ID_PREFIX",
+    "com.gmeremit.online.gmeremittance_native.stag:id",
 )
 
-DEFAULT_USERNAME = os.getenv("TEST_USERNAME", "")  # 환경변수로 설정하세요
-DEFAULT_PIN = os.getenv("TEST_PIN", "")  # 환경변수로 설정하세요
+# 민감정보는 반드시 환경변수로 설정 (기본값 없음)
+DEFAULT_USERNAME = os.getenv("GME_TEST_USERNAME", "")
+DEFAULT_PIN = os.getenv("GME_TEST_PIN", "")
 
 
 def _id(resource_id_prefix: str, suffix: str) -> str:
@@ -132,14 +138,15 @@ def login(
     """Perform login flow.
 
     Notes:
-        - 환경변수 TEST_USERNAME, TEST_PIN을 설정하거나 파라미터로 전달하세요.
+        - 환경변수 GME_TEST_USERNAME, GME_TEST_PIN을 설정하거나 파라미터로 전달하세요.
         - If you need stronger verification, pass a custom wait in the calling
           test (e.g., wait for a known element on the home screen).
     """
     if not username or not pin:
         raise ValueError(
             "username과 pin이 필요합니다. "
-            "환경변수 TEST_USERNAME, TEST_PIN을 설정하거나 파라미터로 전달하세요."
+            "환경변수 GME_TEST_USERNAME, GME_TEST_PIN을 설정하거나 "
+            ".env 파일에 추가하세요."
         )
 
     navigate_to_login_screen(driver, resource_id_prefix=resource_id_prefix, timeout=timeout)
@@ -164,17 +171,17 @@ def login(
     with _step("로그인 완료 대기"):
         time.sleep(post_login_sleep)
 
-    # 로그인 후 팝업 처리 (있을 경우에만)
-    _handle_post_login_popup_if_present(driver, resource_id_prefix=resource_id_prefix)
+    # 보이스피싱 경고 팝업 처리 (있을 경우에만)
+    _handle_voice_phishing_popup_if_present(driver, resource_id_prefix=resource_id_prefix)
 
 
-def _handle_post_login_popup_if_present(
+def _handle_voice_phishing_popup_if_present(
     driver,
     resource_id_prefix: str = DEFAULT_RESOURCE_ID_PREFIX,
     timeout: float = 3,
 ) -> bool:
-    """로그인 후 팝업이 있으면 처리합니다.
-
+    """로그인 후 보이스피싱 경고 팝업이 있으면 처리합니다.
+    
     Returns:
         bool: 팝업을 처리했으면 True, 팝업이 없었으면 False
     """
@@ -185,12 +192,12 @@ def _handle_post_login_popup_if_present(
                 (AppiumBy.ID, _id(resource_id_prefix, "check_customer"))
             )
         )
-
-        with _step("로그인 후 팝업 처리"):
+        
+        with _step("보이스피싱 경고 팝업 처리"):
             # 체크박스 클릭
             checkbox.click()
             time.sleep(0.5)
-
+            
             # OK 버튼 클릭 (체크박스 클릭 후 활성화됨)
             ok_button = WebDriverWait(driver, timeout).until(
                 EC.element_to_be_clickable(
@@ -199,9 +206,9 @@ def _handle_post_login_popup_if_present(
             )
             ok_button.click()
             time.sleep(1)
-
+            
         return True
-
+        
     except (NoSuchElementException, TimeoutException):
         # 팝업이 없으면 그냥 넘어감
         return False

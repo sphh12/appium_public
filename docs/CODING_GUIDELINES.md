@@ -94,11 +94,10 @@ element = self.find_element_with_fallback(
 
 ```
 tests/android/
-├── sample/             # 샘플 테스트
-│   └── test_sample_android.py
-├── login_test.py       # 로그인 테스트
-├── <feature>_test.py   # 기능별 테스트
-└── ...
+├── basic_01_test.py    # 기본 테스트
+├── gme1_test.py        # GME 테스트 1
+├── xml_test.py         # XML 기반 테스트
+└── <기능>_test.py      # 기능별 테스트
 ```
 
 ### 3.2 클래스/메서드명

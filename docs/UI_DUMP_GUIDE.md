@@ -159,10 +159,10 @@ ui_dumps/
 ```xml
 <android.widget.Button
     index="1"
-    package="com.example.app"
+    package="com.gmeremit.online.gmeremittance_native.stag"
     class="android.widget.Button"
     text="Login"
-    resource-id="com.example.app:id/btn_submit"
+    resource-id="com.gmeremit.online.gmeremittance_native.stag:id/btn_submit"
     checkable="false"
     checked="false"
     clickable="true"
@@ -175,13 +175,13 @@ ui_dumps/
 
 ---
 
-## 캡처된 화면 분석 (예시)
+## 캡처된 화면 분석 (GME Remit 앱)
 
 ### 001.xml - 안드로이드 홈 화면
 
-| 요소          | content-desc                          | 용도    |
-| ------------- | ------------------------------------- | ------- |
-| 앱 아이콘     | `Your App` 또는 `Predicted app: ...`  | 앱 실행 |
+| 요소          | content-desc                                | 용도    |
+| ------------- | ------------------------------------------- | ------- |
+| GME 앱 아이콘 | `GME Remit` 또는 `Predicted app: GME Remit` | 앱 실행 |
 
 ### 002.xml - 앱 메인 화면 (로그인 전)
 
@@ -247,7 +247,7 @@ except NoSuchElementException:
     # 2순위: Resource ID
     element = driver.find_element(
         AppiumBy.ID,
-        "com.example.app:id/ivChannelTalk"
+        "com.gmeremit.online.gmeremittance_native.stag:id/ivChannelTalk"
     )
 ```
 
@@ -287,7 +287,7 @@ def find_element_with_fallback(driver, accessibility_id, resource_id, timeout=5)
 
 ```python
 class TestXmlScenario:
-    PACKAGE_ID = "com.example.app:id"
+    PACKAGE_ID = "com.gmeremit.online.gmeremittance_native.stag:id"
 
     # XML에서 추출한 요소 정보
     LOGIN_SCREEN_CLICKABLE_ELEMENTS = [
@@ -365,8 +365,8 @@ python tools/ui_dump.py --mask-existing
 ```
 기존 ui_dumps 파일 마스킹 시작...
 --------------------------------------------------
-마스킹 완료: ui_dumps/session_001/001_Login.xml
-마스킹 완료: ui_dumps/session_001/002_Profile.xml
+마스킹 완료: ui_dumps/260123_1254/024_Remittance.xml
+마스킹 완료: ui_dumps/260123_1254/027_Edit_Info.xml
 --------------------------------------------------
 총 2개 파일 마스킹 완료
 ```
