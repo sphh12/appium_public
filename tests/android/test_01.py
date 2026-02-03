@@ -1,3 +1,4 @@
+import os
 import time
 
 import pytest
@@ -5,6 +6,15 @@ import allure
 from appium.webdriver.common.appiumby import AppiumBy
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from dotenv import load_dotenv
+
+# 환경변수 로드
+load_dotenv()
+
+# 환경변수에서 설정 로드
+TEST_USERNAME = os.getenv("GME_TEST_USERNAME", "")
+TEST_PIN = os.getenv("GME_TEST_PIN", "")
+RESOURCE_ID_PREFIX = os.getenv("GME_RESOURCE_ID_PREFIX", "com.gmeremit.online.gmeremittance_native.stag:id")
 
 
 class TestAndroidSample:
@@ -19,7 +29,7 @@ class TestAndroidSample:
         with allure.step("언어 선택 메뉴 열기"):
             el3 = android_driver.find_element(
                 by=AppiumBy.ID,
-                value="com.gmeremit.online.gmeremittance_native.stag:id/selectedLanguageText",
+                value=f"{RESOURCE_ID_PREFIX}/selectedLanguageText",
             )
             el3.click()
 
@@ -46,26 +56,26 @@ class TestAndroidSample:
         with allure.step("로그인 화면 진입"):
             el6 = android_driver.find_element(
                 by=AppiumBy.ID,
-                value="com.gmeremit.online.gmeremittance_native.stag:id/btn_lgn",
+                value=f"{RESOURCE_ID_PREFIX}/btn_lgn",
             )
             el6.click()
 
         with allure.step("아이디 입력"):
             el7 = android_driver.find_element(
                 by=AppiumBy.ID,
-                value="com.gmeremit.online.gmeremittance_native.stag:id/usernameId",
+                value=f"{RESOURCE_ID_PREFIX}/usernameId",
             )
-            el7.send_keys("gme_qualitytest44")
+            el7.send_keys(TEST_USERNAME)
 
         with allure.step("비밀번호 입력"):
             el8 = android_driver.find_element(
                 by=AppiumBy.ID,
-                value="com.gmeremit.online.gmeremittance_native.stag:id/securityKeyboardEditText",
+                value=f"{RESOURCE_ID_PREFIX}/securityKeyboardEditText",
             )
             el8.click()  # 키보드 활성화
 
             # 보안 키보드에서 각 숫자 버튼 클릭 (content-desc로 찾기)
-            for digit in "123456":
+            for digit in TEST_PIN:
                 btn = android_driver.find_element(
                     by=AppiumBy.ACCESSIBILITY_ID,
                     value=digit
@@ -82,14 +92,14 @@ class TestAndroidSample:
         with allure.step("키보드 닫기(빈곳 클릭)"):
             e20 = android_driver.find_element(
                 by=AppiumBy.ID,
-                value="com.gmeremit.online.gmeremittance_native.stag:id/toolbarLayout",
+                value=f"{RESOURCE_ID_PREFIX}/toolbarLayout",
             )
             e20.click()
 
         with allure.step("로그인 시도"):
             el9 = android_driver.find_element(
                 by=AppiumBy.ID,
-                value="com.gmeremit.online.gmeremittance_native.stag:id/btn_submit",
+                value=f"{RESOURCE_ID_PREFIX}/btn_submit",
             )
             el9.click()
 
@@ -104,28 +114,28 @@ class TestAndroidSample:
         with allure.step("로그인 화면 진입"):
             login_btn = android_driver.find_element(
                 by=AppiumBy.ID,
-                value="com.gmeremit.online.gmeremittance_native.stag:id/btn_lgn",
+                value=f"{RESOURCE_ID_PREFIX}/btn_lgn",
             )
             login_btn.click()
 
         with allure.step("아이디만 입력"):
             username = android_driver.find_element(
                 by=AppiumBy.ID,
-                value="com.gmeremit.online.gmeremittance_native.stag:id/usernameId",
+                value=f"{RESOURCE_ID_PREFIX}/usernameId",
             )
-            username.send_keys("gme_qualitytest44")
+            username.send_keys(TEST_USERNAME)
 
         with allure.step("로그인 시도"):
             submit_btn = android_driver.find_element(
                 by=AppiumBy.ID,
-                value="com.gmeremit.online.gmeremittance_native.stag:id/btn_submit",
+                value=f"{RESOURCE_ID_PREFIX}/btn_submit",
             )
             submit_btn.click()
 
         with allure.step("에러 메시지 확인"):
             error_text = WebDriverWait(android_driver, 10).until(
                 EC.presence_of_element_located(
-                    (AppiumBy.ID, "com.gmeremit.online.gmeremittance_native.stag:id/passwordErrorTxt")
+                    (AppiumBy.ID, f"{RESOURCE_ID_PREFIX}/passwordErrorTxt")
                 )
             )
 

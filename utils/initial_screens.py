@@ -5,17 +5,27 @@ when `noReset=False` (e.g., language selection, terms and conditions).
 
 It is intentionally conservative: it only acts when it positively identifies
 known screens.
+
+환경변수 설정:
+  - GME_RESOURCE_ID_PREFIX: 앱의 resource-id 접두사
 """
 
 from __future__ import annotations
 
+import os
 import time
 
 from appium.webdriver.common.appiumby import AppiumBy  # type: ignore
 from selenium.common.exceptions import NoSuchElementException
+from dotenv import load_dotenv
 
+# 환경변수 로드 (.env 파일)
+load_dotenv()
 
-DEFAULT_RESOURCE_ID_PREFIX = "com.gmeremit.online.gmeremittance_native.stag:id"
+DEFAULT_RESOURCE_ID_PREFIX = os.getenv(
+    "GME_RESOURCE_ID_PREFIX",
+    "com.gmeremit.online.gmeremittance_native.stag:id"
+)
 
 
 def _id(resource_id_prefix: str, suffix: str) -> str:

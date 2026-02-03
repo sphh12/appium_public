@@ -8,6 +8,7 @@ XML 덤프 기반 화면 검증 (260123_1254)
 - Edit Info (027)
 - GMEPay Wallet Guide (030)
 """
+import os
 import time
 
 import pytest
@@ -16,14 +17,24 @@ from appium.webdriver.common.appiumby import AppiumBy
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from dotenv import load_dotenv
 
 from utils.auth import login
+
+# 환경변수 로드
+load_dotenv()
+
+# 환경변수에서 설정 로드
+RESOURCE_ID_PREFIX = os.getenv(
+    "GME_RESOURCE_ID_PREFIX",
+    "com.gmeremit.online.gmeremittance_native.stag:id"
+)
 
 
 class TestBasic01:
     """GME Remit 앱 기본 테스트 - XML 덤프 기반"""
 
-    PACKAGE_ID = "com.gmeremit.online.gmeremittance_native.stag:id"
+    PACKAGE_ID = RESOURCE_ID_PREFIX
 
     def find_element_with_fallback(self, driver, accessibility_id=None, resource_id=None, timeout=5):
         """Accessibility ID 우선, Resource ID fallback"""

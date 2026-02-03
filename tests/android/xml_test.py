@@ -1,3 +1,4 @@
+import os
 import time
 import pytest
 import allure
@@ -5,6 +6,16 @@ from appium.webdriver.common.appiumby import AppiumBy
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
+from dotenv import load_dotenv
+
+# 환경변수 로드
+load_dotenv()
+
+# 환경변수에서 설정 로드
+RESOURCE_ID_PREFIX = os.getenv(
+    "GME_RESOURCE_ID_PREFIX",
+    "com.gmeremit.online.gmeremittance_native.stag:id"
+)
 
 
 class TestXmlScenario:
@@ -20,8 +31,8 @@ class TestXmlScenario:
     - 2순위: Resource ID (resource-id)
     """
 
-    # 앱 패키지 ID
-    PACKAGE_ID = "com.gmeremit.online.gmeremittance_native.stag:id"
+    # 앱 패키지 ID (환경변수에서 로드)
+    PACKAGE_ID = RESOURCE_ID_PREFIX
 
     # 로그인 화면의 클릭 가능한 요소들 (005.xml에서 추출)
     # accessibility_id: content-desc 값 (있는 경우)

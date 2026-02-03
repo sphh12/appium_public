@@ -1,3 +1,4 @@
+import os
 import time
 
 import pytest
@@ -5,8 +6,16 @@ import allure
 from appium.webdriver.common.appiumby import AppiumBy
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from dotenv import load_dotenv
 
 from utils.auth import login, navigate_to_login_screen
+
+# 환경변수 로드
+load_dotenv()
+
+# 환경변수에서 설정 로드
+TEST_USERNAME = os.getenv("GME_TEST_USERNAME", "")
+RESOURCE_ID_PREFIX = os.getenv("GME_RESOURCE_ID_PREFIX", "com.gmeremit.online.gmeremittance_native.stag:id")
 
 
 class TestAndroidSample:
@@ -21,7 +30,7 @@ class TestAndroidSample:
         with allure.step("언어 선택 메뉴 열기"):
             el3 = android_driver.find_element(
                 by=AppiumBy.ID,
-                value="com.gmeremit.online.gmeremittance_native.stag:id/selectedLanguageText",
+                value=f"{RESOURCE_ID_PREFIX}/selectedLanguageText",
             )
             el3.click()
 
@@ -63,21 +72,21 @@ class TestAndroidSample:
         with allure.step("아이디만 입력"):
             username = android_driver.find_element(
                 by=AppiumBy.ID,
-                value="com.gmeremit.online.gmeremittance_native.stag:id/usernameId",
+                value=f"{RESOURCE_ID_PREFIX}/usernameId",
             )
-            username.send_keys("gme_qualitytest44")
+            username.send_keys(TEST_USERNAME)
 
         with allure.step("로그인 시도"):
             submit_btn = android_driver.find_element(
                 by=AppiumBy.ID,
-                value="com.gmeremit.online.gmeremittance_native.stag:id/btn_submit",
+                value=f"{RESOURCE_ID_PREFIX}/btn_submit",
             )
             submit_btn.click()
 
         with allure.step("에러 메시지 확인"):
             error_text = WebDriverWait(android_driver, 10).until(
                 EC.presence_of_element_located(
-                    (AppiumBy.ID, "com.gmeremit.online.gmeremittance_native.stag:id/passwordErrorTxt")
+                    (AppiumBy.ID, f"{RESOURCE_ID_PREFIX}/passwordErrorTxt")
                 )
             )
 

@@ -2,6 +2,13 @@
 
 This module centralizes repeatable flows like navigating to the login screen and
 performing login so that new tests can start from a logged-in state.
+
+환경변수 설정:
+  - GME_TEST_USERNAME: 테스트 사용자 ID
+  - GME_TEST_PIN: 테스트 사용자 PIN
+  - GME_RESOURCE_ID_PREFIX: 앱의 resource-id 접두사
+
+.env 파일 또는 환경변수로 설정하세요.
 """
 
 from __future__ import annotations
@@ -14,7 +21,10 @@ from appium.webdriver.common.appiumby import AppiumBy  # type: ignore
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
+from dotenv import load_dotenv
 
+# 환경변수 로드 (.env 파일)
+load_dotenv()
 
 try:
     import allure  # type: ignore
@@ -22,13 +32,15 @@ except Exception:  # pragma: no cover
     allure = None
 
 
+# 환경변수에서 설정 로드
 DEFAULT_RESOURCE_ID_PREFIX = os.getenv(
     "GME_RESOURCE_ID_PREFIX",
     "com.gmeremit.online.gmeremittance_native.stag:id",
 )
 
-DEFAULT_USERNAME = os.getenv("GME_TEST_USERNAME", "gme_qualitytest44")
-DEFAULT_PIN = os.getenv("GME_TEST_PIN", "123456")
+# 민감정보는 반드시 환경변수로 설정 (기본값 없음)
+DEFAULT_USERNAME = os.getenv("GME_TEST_USERNAME", "")
+DEFAULT_PIN = os.getenv("GME_TEST_PIN", "")
 
 
 def _id(resource_id_prefix: str, suffix: str) -> str:
@@ -126,11 +138,17 @@ def login(
     """Perform login flow.
 
     Notes:
-        - This function is intentionally conservative and mirrors the current
-          `gme1_test.py` behavior (it does not assert the post-login state).
+        - 환경변수 GME_TEST_USERNAME, GME_TEST_PIN을 설정하거나 파라미터로 전달하세요.
         - If you need stronger verification, pass a custom wait in the calling
           test (e.g., wait for a known element on the home screen).
     """
+    if not username or not pin:
+        raise ValueError(
+            "username과 pin이 필요합니다. "
+            "환경변수 GME_TEST_USERNAME, GME_TEST_PIN을 설정하거나 "
+            ".env 파일에 추가하세요."
+        )
+
     navigate_to_login_screen(driver, resource_id_prefix=resource_id_prefix, timeout=timeout)
 
     with _step("아이디 입력"):
