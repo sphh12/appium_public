@@ -1,5 +1,51 @@
 # Change Notes
 
+## 2026-02-03
+
+### 민감정보 환경변수화 (.env 파일 분리)
+
+- **환경변수 기반 설정 관리 도입**: 하드코딩된 민감정보를 환경변수로 분리
+  - 테스트 계정 (username, PIN) 환경변수화
+  - APK 파일명, 패키지 ID (resource-id prefix) 환경변수화
+  - Appium 서버 설정 (host, port) 환경변수화
+- **`.env` 파일 기반 설정**: `python-dotenv` 패키지 활용
+- **`.env.example` 템플릿 파일 추가**: 새 환경 설정 시 참고용
+- **`.gitignore` 업데이트**: `.env` 파일 제외 규칙 추가 (민감정보 보호)
+
+환경변수 목록:
+| 변수명 | 설명 | 필수 |
+|--------|------|------|
+| `GME_TEST_USERNAME` | 테스트 계정 ID | O |
+| `GME_TEST_PIN` | 테스트 계정 PIN | O |
+| `GME_RESOURCE_ID_PREFIX` | 앱 패키지의 resource-id 접두사 | O |
+| `GME_APK_FILENAME` | APK 파일명 | O |
+| `APPIUM_HOST` | Appium 서버 호스트 | X |
+| `APPIUM_PORT` | Appium 서버 포트 | X |
+| `ANDROID_UDID` | 실물 디바이스 시리얼 | X |
+
+사용법:
+```bash
+# .env.example을 복사하여 .env 생성
+cp .env.example .env
+
+# .env 파일 편집 후 테스트 실행
+./shell/run-app.sh --gme1_test
+```
+
+변경 파일:
+- [.env.example](.env.example) (신규)
+- [.gitignore](.gitignore)
+- [requirements.txt](requirements.txt) - `python-dotenv` 추가
+- [config/capabilities.py](config/capabilities.py)
+- [tests/android/gme1_test.py](tests/android/gme1_test.py)
+- [tests/android/test_01.py](tests/android/test_01.py)
+- [tests/android/basic_01_test.py](tests/android/basic_01_test.py)
+- [tests/android/xml_test.py](tests/android/xml_test.py)
+- [utils/auth.py](utils/auth.py)
+- [utils/initial_screens.py](utils/initial_screens.py)
+
+---
+
 ## 2026-01-28
 
 ### README 문서 구조 개선
