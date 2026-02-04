@@ -1,5 +1,35 @@
 # Change Notes
 
+## 2026-02-04
+
+### 앱 언어 설정 모듈 추가 (language.py)
+
+- **언어 변경 모듈 신규 생성**: 로그인 전 앱 언어를 영어로 설정하는 기능
+  - `is_main_screen_with_language_button()`: 메인 화면의 언어 버튼 존재 확인
+  - `open_language_list()`: 언어 선택 목록 열기
+  - `set_language_to_english()`: 영어로 언어 설정
+  - `ensure_english_language()`: 로그인 전 호출되는 통합 함수
+- **UiSelector 기반 요소 찾기**: XPath보다 안정적인 UiSelector 방식 적용
+  - 1순위: UiSelector (resourceId + text 조합)
+  - 2순위: XPath 폴백
+  - 3순위: 스크롤 후 재시도
+- **auth.py 통합**: `login()` 함수에 `set_english` 파라미터 추가
+  - 기본값 `True`로 로그인 전 자동 영어 설정
+
+주요 Resource-ID:
+| Resource-ID | 용도 |
+|-------------|------|
+| `selectedLanguageText` | 메인 화면의 언어 선택 버튼 |
+| `languageRv` | 언어 목록 RecyclerView |
+| `countryLanguageText` | 각 언어 항목의 텍스트 |
+
+변경/추가 파일:
+- [utils/language.py](utils/language.py) (신규)
+- [utils/auth.py](utils/auth.py)
+- [tests/test_language_module.py](tests/test_language_module.py) (신규, 디버그용)
+
+---
+
 ## 2026-02-03
 
 ### 민감정보 환경변수화 (.env 파일 분리)
@@ -15,10 +45,10 @@
 환경변수 목록:
 | 변수명 | 설명 | 필수 |
 |--------|------|------|
-| `GME_TEST_USERNAME` | 테스트 계정 ID | O |
-| `GME_TEST_PIN` | 테스트 계정 PIN | O |
+| `STG_ID` / `STG_PW` | Staging 테스트 계정 | O |
+| `LIVE_ID` / `LIVE_PW` | Live 테스트 계정 | O |
 | `GME_RESOURCE_ID_PREFIX` | 앱 패키지의 resource-id 접두사 | O |
-| `GME_APK_FILENAME` | APK 파일명 | O |
+| `STG_APK` / `LIVE_APK` | APK 파일명 (Staging/Live) | O |
 | `APPIUM_HOST` | Appium 서버 호스트 | X |
 | `APPIUM_PORT` | Appium 서버 포트 | X |
 | `ANDROID_UDID` | 실물 디바이스 시리얼 | X |

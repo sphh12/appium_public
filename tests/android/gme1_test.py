@@ -14,7 +14,7 @@ from utils.auth import login, navigate_to_login_screen
 load_dotenv()
 
 # 환경변수에서 설정 로드
-TEST_USERNAME = os.getenv("GME_TEST_USERNAME", "")
+TEST_USERNAME = os.getenv("STG_ID", "")
 RESOURCE_ID_PREFIX = os.getenv("GME_RESOURCE_ID_PREFIX", "com.gmeremit.online.gmeremittance_native.stag:id")
 
 

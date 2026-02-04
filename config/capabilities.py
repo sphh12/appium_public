@@ -3,7 +3,8 @@ Appium Desired Capabilities 설정
 Android 및 iOS 디바이스/에뮬레이터 설정
 
 환경변수 설정:
-  - GME_APK_FILENAME: APK 파일명 (기본: app.apk)
+  - STG_APK: Staging APK 파일명
+  - LIVE_APK: Live APK 파일명
   - APPIUM_HOST: Appium 서버 호스트 (기본: 127.0.0.1)
   - APPIUM_PORT: Appium 서버 포트 (기본: 4723)
   - ANDROID_UDID: 실물 디바이스 시리얼 (선택)
@@ -30,7 +31,9 @@ ANDROID_DEVICE_NAME = os.getenv("ANDROID_DEVICE_NAME", "Android Emulator")
 ANDROID_PLATFORM_VERSION = os.getenv("ANDROID_PLATFORM_VERSION")
 
 # APK 파일명 (환경변수로 설정)
-APK_FILENAME = os.getenv("GME_APK_FILENAME", "app.apk")
+# STG_APK (Staging) 또는 LIVE_APK 사용
+# --app 옵션으로 런타임에 변경 가능
+APK_FILENAME = os.getenv("STG_APK", os.getenv("LIVE_APK", "app.apk"))
 
 # Android 설정
 ANDROID_CAPS = {

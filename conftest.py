@@ -325,10 +325,14 @@ def pytest_runtest_makereport(item, call):
 
     # 스크린샷: hybrid는 FAIL/SKIP/BROKEN(대부분 setup/teardown 실패=report.failed)에만,
     # all 모드에선 PASS도(call 단계에서) 첨부.
-    want_screenshot = (report.failed or report.skipped) or (attach_all and report.when == "call")
+    # outcome이 "passed"가 아닌 모든 경우 (failed, skipped, broken 포함)
+    is_problematic = report.outcome != "passed"
+    want_screenshot = is_problematic or (attach_all and report.when == "call")
 
-    # 부가 진단(page source/caps/logcat): hybrid는 실패(=broken 포함)만, all 모드에선 PASS도(call 단계에서) 첨부.
-    want_diagnostics = report.failed or (attach_all and report.when == "call")
+    # 부가 진단(page source/caps/logcat):
+    # - hybrid: FAIL/SKIP/BROKEN (outcome != "passed")
+    # - all 모드: PASS도 포함 (call 단계에서)
+    want_diagnostics = is_problematic or (attach_all and report.when == "call")
 
     if want_screenshot and not getattr(item, "_allure_screen_attached", False):
         if driver:

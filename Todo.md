@@ -1,5 +1,39 @@
 # Todo - 해결 필요 항목
 
+## 2026-02-04
+
+### ~~환경변수 구조 개선 (STG/LIVE 분리)~~ ✅
+
+- ~~STG_ID/STG_PW, LIVE_ID/LIVE_PW로 계정 분리~~
+- ~~STG_APK/LIVE_APK로 APK 파일 분리~~
+- ~~run-stg.sh, run-live.sh에서 .env 읽도록 수정~~
+- ~~관련 파일 업데이트: auth.py, capabilities.py, .env.example~~
+
+### ~~GitHub Gist 설정~~ ✅
+
+- ~~gh CLI 설치~~
+- ~~change_notes.md Gist 생성 (Secret)~~
+- ~~GIT_RULES.md에 Gist 동기화 규칙 추가~~
+
+### ~~지문 인증 설정 화면 처리~~ ✅
+
+- ~~로그인 후 지문 인증 설정 화면 발생 시 [나중에] 버튼 자동 탭~~
+- ~~auth.py에 _handle_fingerprint_setup_if_present() 함수 추가~~
+
+### ~~앱 언어 설정 모듈 추가~~ ✅
+
+- ~~language.py 모듈 생성 (UiSelector 기반)~~
+- ~~auth.py에 ensure_english_language() 통합~~
+- ~~테스트 파일 test_language_module.py 생성~~
+- ~~언어 변경 기능 테스트 완료~~
+
+### 로그인 모듈 테스트 검증 (진행 중)
+
+- 지문 인증 화면 처리 코드 동작 확인 필요
+- UI 덤프에서 정확한 요소 확인 필요 시 수집
+
+---
+
 ## 2026-01-27
 
 ### run-live.sh 실행 실패 (진행 중)

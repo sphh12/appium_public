@@ -12,8 +12,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # 환경변수에서 설정 로드
-TEST_USERNAME = os.getenv("GME_TEST_USERNAME", "")
-TEST_PIN = os.getenv("GME_TEST_PIN", "")
+TEST_USERNAME = os.getenv("STG_ID", "")
+TEST_PIN = os.getenv("STG_PW", "")
 RESOURCE_ID_PREFIX = os.getenv("GME_RESOURCE_ID_PREFIX", "com.gmeremit.online.gmeremittance_native.stag:id")
 
 
