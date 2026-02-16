@@ -1,115 +1,90 @@
 # Todo - 해결 필요 항목
 
-## 2026-02-04
+> 마지막 업데이트: 2026-02-16
 
-### ~~환경변수 구조 개선 (STG/LIVE 분리)~~ ✅
+## 진행 중
 
-- ~~STG_ID/STG_PW, LIVE_ID/LIVE_PW로 계정 분리~~
-- ~~STG_APK/LIVE_APK로 APK 파일 분리~~
-- ~~run-stg.sh, run-live.sh에서 .env 읽도록 수정~~
-- ~~관련 파일 업데이트: auth.py, capabilities.py, .env.example~~
+### explore_app.py Live 앱 실행 및 화면 구조 파악
 
-### ~~GitHub Gist 설정~~ ✅
+- **상태**: 스크립트 수정 완료, 실행 미완
+- **목표**: Live 앱의 전체 화면/메뉴 구조를 자동 탐색 후 APP_STRUCTURE.md 업데이트
+- **실행 명령어**: `USE_LIVE=true /Users/sph/appium/venv/bin/python3 tools/explore_app.py`
+- **사전 조건**:
+  - Appium 서버 실행 (`appium`)
+  - 에뮬레이터에 Live 앱 설치 완료 (v7.14.0)
+- **확인 포인트**:
+  - `ui_dumps/explore_YYYYMMDD_HHMM/` 폴더에 XML 파일 생성
+  - 하단 탭 5개 (Home, History, Card, Event, Profile) 캡처
+  - 햄버거 메뉴 8개 항목 캡처
+  - 팝업 캡처 파일 (`popup_*.xml`) 확인
 
-- ~~gh CLI 설치~~
-- ~~change_notes.md Gist 생성 (Secret)~~
-- ~~GIT_RULES.md에 Gist 동기화 규칙 추가~~
+### APP_STRUCTURE.md 미확인 화면 업데이트
 
-### ~~지문 인증 설정 화면 처리~~ ✅
+- **상태**: explore_app.py 실행 결과 대기 중
+- **미확인 화면 목록** (10개):
+  1. History 탭 메인 + 서브탭 (Overseas, Schedule History, Domestic, Inbound)
+  2. Card 탭 메인
+  3. Event 탭 메인
+  4. Profile 탭 메인 + 각 메뉴 항목
+- **완료 기준**: 미확인 → 확인 전환, 각 화면별 resource-id/텍스트 매핑 완료
 
-- ~~로그인 후 지문 인증 설정 화면 발생 시 [나중에] 버튼 자동 탭~~
-- ~~auth.py에 _handle_fingerprint_setup_if_present() 함수 추가~~
+### 처음 보는 팝업 기록 및 케이스화
 
-### ~~앱 언어 설정 모듈 추가~~ ✅
+- **상태**: 팝업 캡처 기능 구현 완료, 실행 후 분석 필요
+- **내용**: explore_app.py가 저장하는 `popup_*.xml` 분석 → APP_STRUCTURE.md에 팝업 케이스 추가
+- **참고**: "처음보는 팝업이 있으면 다 기록하고, 해당화면도 케이스로 만들어줘" (사용자 지시)
 
-- ~~language.py 모듈 생성 (UiSelector 기반)~~
-- ~~auth.py에 ensure_english_language() 통합~~
-- ~~테스트 파일 test_language_module.py 생성~~
-- ~~언어 변경 기능 테스트 완료~~
+---
 
-### 로그인 모듈 테스트 검증 (진행 중)
+## 다음 단계 (사용자 가이드 수신 후)
+
+### 송금 화면 탐색 (금액 입력까지만)
+
+- **주의**: 실제 결제/송금 액션 절대 금지
+- **범위**: Send Money 진입 → 수취인 선택 → 금액 입력 화면 캡처 → 중단
+- **참고**: "실제 송금이나 돈을 보내는 액션은 금액 입력하는 액션 정도만 진행해줘" (사용자 지시)
+
+### APP_STRUCTURE.md 기반 자동화 코드 생성
+
+- **조건**: APP_STRUCTURE.md 완성 + 사용자 리뷰 후
+- **참고**: "파악된 기록을 보고 수정을 거친후에 가이드를 줄게" (사용자 지시)
+- **목표**: Page Object Model 기반 자동화 코드 생성
+
+---
+
+## 알려진 이슈
+
+### 로그인 모듈 테스트 검증
 
 - 지문 인증 화면 처리 코드 동작 확인 필요
 - UI 덤프에서 정확한 요소 확인 필요 시 수집
 
----
-
-## 2026-01-27
-
-### run-live.sh 실행 실패 (진행 중)
-
-**현상:**
-- `./shell/run-live.sh --basic_01_test` 실행 시 테스트가 시작되지만 첫 번째 테스트에서 멈춤
-- 에뮬레이터/디바이스에 반응 없음
-- APK 설치 또는 앱 실행 단계에서 멈추는 것으로 추정
-
-**로그:**
-```
-tests/android/basic_01_test.py::TestBasic01::test_01_easy_wallet_account_elements
-(여기서 멈춤)
-```
-
-**현재 APK 파일 상태:**
-
-| 파일명 | 크기 | 형식 | 사용 가능 |
-|--------|------|------|-----------|
-| `[Stg]GME_7.13.0.apk` | 169MB | 단일 APK | ✅ |
-| `[LiveTest]GME_7.14.0.apk` | 172MB | 단일 APK | ✅ (현재 run-live.sh에 설정) |
-| `[Live]GME_7.13.3.apk+` | 137MB | Split APK (App Bundle) | ❌ 사용 불가 |
-
-**Split APK 문제:**
-- `[Live]GME_7.13.3.apk+`는 Google Play에서 다운로드된 App Bundle 형식
-- 내부에 `base.apk`, `split_config.*.apk` 등 여러 파일로 분리됨
-- Appium에서 직접 설치 불가
-
-**확인 필요 사항:**
-1. 디바이스/에뮬레이터 화면 상태 (잠금, 팝업 등)
-2. APK 설치 권한 팝업 확인
-3. USB 디버깅 권한 확인 (실물 디바이스)
-4. Appium 서버 로그 확인
-
-**해결 방안:**
-1. **단기**: `[LiveTest]GME_7.14.0.apk` 또는 `[Stg]GME_7.13.0.apk`로 테스트
-2. **장기**: 빌드 서버에서 Universal APK (단일 APK) 파일 요청
-   - `assembleRelease` 또는 `bundletool`로 Universal APK 생성
-
----
-
 ### UiAutomator2 드라이버 설치 경고 (낮은 우선순위)
 
-**현상:**
-```
-Error: ✖ A driver named "uiautomator2" is already installed.
-[FAIL] Could not install UiAutomator2 driver
-```
-
-**원인:**
 - `run-app.sh`의 드라이버 체크 로직이 "이미 설치됨"을 "설치 안됨"으로 오인
+- 실제 동작에는 문제 없음, 로그에 불필요한 에러 메시지 출력
 
-**영향:**
-- 실제 동작에는 문제 없음 (이미 설치되어 있음)
-- 로그에 불필요한 에러 메시지 출력
+### UnicodeDecodeError 경고 (낮은 우선순위, Windows 환경)
 
-**해결 방안:**
-- `run-app.sh`의 UiAutomator2 설치 체크 로직 수정 필요
+- Windows 환경에서 한글 UTF-8 처리 문제 (`cp949` 코덱)
+- 환경변수 `PYTHONIOENCODING=utf-8` 설정 또는 subprocess `encoding='utf-8'` 명시로 해결 가능
 
 ---
 
-### UnicodeDecodeError 경고 (낮은 우선순위)
+## 참고사항
 
-**현상:**
-```
-UnicodeDecodeError: 'cp949' codec can't decode byte 0xeb in position 0
-```
+### 앱 환경
+| 항목 | 값 |
+|------|-----|
+| Live 앱 | `com.gmeremit.online.gmeremittance_native` (v7.14.0) |
+| Staging 앱 | `com.gmeremit.online.gmeremittance_native.stag` (v7.13.0) |
+| 현재 사용 | **Live** (Staging 팝업 과다로 전환) |
+| 에뮬레이터 | emulator-5554 |
 
-**원인:**
-- Windows 환경에서 한글 등 UTF-8 문자 처리 문제
-- subprocess 출력 인코딩 불일치
-
-**영향:**
-- 테스트 실행에는 영향 없음
-- 로그에 경고 메시지 출력
-
-**해결 방안:**
-- 환경변수 `PYTHONIOENCODING=utf-8` 설정
-- 또는 subprocess 호출 시 `encoding='utf-8'` 명시
+### 알려진 팝업
+| 팝업 | 처리 방법 | 처리 위치 |
+|------|-----------|-----------|
+| Renew Auto Debit | btn_okay → iv_back | explore_app.py |
+| In-App Banner | imgvCross (X) / btnTwo (Cancel) | explore_app.py |
+| 보이스피싱 경고 | check_customer → 확인 버튼 | auth.py |
+| 지문 인증 설정 | txt_pennytest_msg (나중에) | auth.py |

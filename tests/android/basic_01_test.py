@@ -1,6 +1,6 @@
 """
 Basic Test 01 - GME Remit 앱 기본 테스트
-XML 덤프 기반 화면 검증 (260123_1254)
+XML 덤프 기반 화면 검증 (aos_260123_1254)
 
 테스트 대상 화면:
 - Easy Wallet Account (022)

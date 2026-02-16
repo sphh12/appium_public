@@ -61,8 +61,8 @@ if ANDROID_PLATFORM_VERSION:
 IOS_CAPS = {
     "platformName": "iOS",
     "automationName": "XCUITest",
-    "deviceName": "iPhone 15",  # 시뮬레이터 이름
-    "platformVersion": "17.0",  # iOS 버전
+    "deviceName": os.getenv("IOS_DEVICE_NAME", "iPhone 17"),  # 시뮬레이터 이름
+    "platformVersion": os.getenv("IOS_PLATFORM_VERSION", "26.2"),  # iOS 버전
     "app": "",  # .app 또는 .ipa 파일 경로
     # "bundleId": "com.example.app",  # 앱 번들 ID
     "noReset": False,

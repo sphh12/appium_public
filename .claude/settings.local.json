@@ -1,7 +1,38 @@
 {
   "permissions": {
     "allow": [
-      "Bash(.venvScriptspython.exe generate_pdf.py)"
+      "Bash(.venvScriptspython.exe generate_pdf.py)",
+      "Bash(git ls-tree:*)",
+      "Bash(java --version:*)",
+      "Bash(allure --version:*)",
+      "Bash(brew --version:*)",
+      "Bash(export ANDROID_HOME=\"$HOME/Library/Android/sdk\")",
+      "Bash(export:*)",
+      "Bash(sdkmanager --list_installed:*)",
+      "Bash($ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --list_installed)",
+      "Bash($ANDROID_HOME/emulator/emulator -list-avds)",
+      "Bash($ANDROID_HOME/cmdline-tools/*/bin/avdmanager)",
+      "Bash(create avd -n Pixel_9 -k \"system-images;android-36.1;google_apis_playstore;arm64-v8a\" -d \"pixel_9\" --force)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)",
+      "Bash(xcrun simctl list:*)",
+      "Bash(pgrep:*)",
+      "Bash(python tests/ios/debug_contacts.py:*)",
+      "Bash(kill:*)",
+      "Bash(python:*)",
+      "Bash(file:*)",
+      "Bash(./shell/run-aos.sh:*)",
+      "Bash(npx appium driver list:*)",
+      "Bash(test:*)",
+      "Bash(node -e:*)",
+      "Bash(grep:*)",
+      "Bash(python3:*)",
+      "Bash(adb devices:*)",
+      "Bash(adb shell:*)",
+      "Bash(curl:*)",
+      "Bash(~/Library/Android/sdk/platform-tools/adb devices)",
+      "Bash(/opt/homebrew/bin/adb devices:*)",
+      "Bash(git add:*)"
     ]
   }
 }

@@ -306,6 +306,11 @@ tr:hover td{background:rgba(255,255,255,.03)}
       </div>
       <div class="controls">
         <input id="q" type="search" placeholder="검색: timestamp / buildName / 플랫폼 / git / commit message" />
+        <select id="platform">
+          <option value="all">Platform: 전체</option>
+          <option value="android">Android</option>
+          <option value="ios">iOS</option>
+        </select>
         <select id="result">
           <option value="all">Result: 전체</option>
           <option value="pass">PASS</option>
@@ -487,16 +492,22 @@ tr:hover td{background:rgba(255,255,255,.03)}
     const tbody = document.querySelector('#tbl tbody');
     const meta = document.getElementById('meta');
     const input = document.getElementById('q');
+    const platformSelect = document.getElementById('platform');
     const resultSelect = document.getElementById('result');
     const fromInput = document.getElementById('from');
     const toInput = document.getElementById('to');
 
     const render = () => {
       const qq = (input.value || '').trim().toLowerCase();
+      const platform = platformSelect.value;
       const result = resultSelect.value;
       const startKey = dateInputToKey(fromInput.value);
       const endKey = dateInputToKey(toInput.value);
       const filtered = runs.filter(r => {
+        if (platform !== 'all') {
+          const rp = ((r.environment && r.environment.platform) || '').toLowerCase();
+          if (rp !== platform) return false;
+        }
         if (result !== 'all' && getResult(r) !== result) return false;
         const dateKey = dateKeyFromTimestamp(r.timestamp);
         if (startKey && dateKey && dateKey < startKey) return false;
@@ -525,11 +536,13 @@ tr:hover td{background:rgba(255,255,255,.03)}
     const clearBtn = document.getElementById('clearBtn');
 
     input.addEventListener('input', render);
+    platformSelect.addEventListener('change', render);
     resultSelect.addEventListener('change', render);
     fromInput.addEventListener('change', render);
     toInput.addEventListener('change', render);
     clearBtn.addEventListener('click', () => {
       input.value = '';
+      platformSelect.value = 'all';
       resultSelect.value = 'all';
       fromInput.value = '';
       toInput.value = '';

@@ -18,8 +18,10 @@
 **최신 폴더 확인 방법:**
 ```
 ui_dumps/
-├── 20260122_132608/    # 이전 세션
-└── 260123_1254/        # ← 최신 (이 폴더 사용)
+├── aos_20260122_132608/    # Android 이전 세션
+├── aos_260123_1254/        # Android 최신
+├── ios_20260215_0009/      # iOS 이전 세션
+└── ios_20260215_2348/      # ← iOS 최신 (이 폴더 사용)
 ```
 
 ### 1.2 XML 파일 분석 시 확인 항목
@@ -167,10 +169,12 @@ def test_without_initial_handling(self, android_driver):
 | 인터랙티브 | `python tools/ui_dump.py -i` | 수동 캡처 |
 | **Watch (권장)** | `python tools/ui_dump.py -w` | 자동 감지 캡처 |
 
+> iOS: `python tools/ui_dump_ios.py` (동일 옵션 지원)
+
 ### 6.2 Watch 모드 출력
 
 ```
-ui_dumps/260123_1505/
+ui_dumps/aos_260123_1505/
 ├── 001_Main.xml
 ├── 002_History.xml
 └── 003_Edit_Info.xml

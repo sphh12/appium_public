@@ -51,3 +51,6 @@ apk/
 
 # Appium Inspector session files (contains user-specific paths)
 *.appiumsession
+
+# Claude Code
+.claude/CLAUDE.md

@@ -38,7 +38,7 @@ python tools/ui_dump.py
 
 ```bash
 python tools/ui_dump.py login_screen
-# 결과: ui_dumps/20260123_143022_login_screen.xml
+# 결과: ui_dumps/aos_20260123_143022/20260123_143022_login_screen.xml
 ```
 
 ### 3. 인터랙티브 모드
@@ -96,7 +96,7 @@ python tools/ui_dump.py -w 1.0
 감시 종료.
 ==================================================
   총 3개 화면 자동 캡처 완료
-  저장 위치: ui_dumps/260123_1505
+  저장 위치: ui_dumps/aos_260123_1505
 ==================================================
 ```
 
@@ -106,36 +106,50 @@ python tools/ui_dump.py -w 1.0
 
 ### 단일/이름 지정 캡처
 
+플랫폼별 프리픽스 폴더(`aos_`, `ios_`) 안에 파일이 저장됩니다.
+
 ```
 ui_dumps/
-├── 20260122_132500.xml              # 단일 캡처
-├── 20260122_143022_login_screen.xml # 이름 지정 캡처
-└── 20260122_150530_home.xml         # 이름 지정 캡처
+├── aos_20260122_132500/                         # Android 단일 캡처
+│   └── 20260122_132500.xml
+├── aos_20260122_143022/                         # Android 이름 지정 캡처
+│   └── 20260122_143022_login_screen.xml
+├── ios_20260215_2348/                           # iOS 이름 지정 캡처
+│   └── 20260215_2348_contacts_add.xml
 ```
 
-**파일명 형식:** `YYYYMMDD_HHMMSS_[이름].xml`
+**폴더명 형식:** `{플랫폼}_{YYYYMMDD_HHMMSS}`
 
 ### 인터랙티브 모드 / 자동 감지 모드
 
-세션 단위로 폴더가 생성됩니다. 폴더명은 종료 시점의 타임스탬프입니다.
+세션 단위로 폴더가 생성됩니다. 폴더명은 플랫폼 프리픽스 + 종료 시점 타임스탬프입니다.
 
 ```
 ui_dumps/
-├── 20260122_132608/                 # 인터랙티브 세션 (YYYYMMDD_HHMMSS)
+├── aos_20260122_132608/             # Android 인터랙티브 세션
 │   ├── 20260122_132500_001.xml
 │   ├── 20260122_132515_002.xml
 │   └── 20260122_132540_003.xml
 │
-└── 260123_1505/                     # Watch 모드 세션 (yymmdd_HHMM)
-    ├── 001_Main.xml                 # 화면 이름 자동 추출
-    ├── 002_Terms_And_Condition.xml
-    └── 003_Login.xml
+├── aos_260123_1505/                 # Android Watch 모드 세션
+│   ├── 001_Main.xml
+│   ├── 002_Terms_And_Condition.xml
+│   └── 003_Login.xml
+│
+├── ios_20260215_1430/               # iOS 인터랙티브 세션
+│   └── 20260215_143022_001.xml
+│
+└── ios_260216_1505/                 # iOS Watch 모드 세션
+    ├── 001_Contacts_List.xml
+    └── 002_Contacts_Add.xml
 ```
 
 **폴더명 형식:**
 
-- 인터랙티브 모드: `YYYYMMDD_HHMMSS` (예: 20260123_150530)
-- Watch 모드: `yymmdd_HHMM` (예: 260123_1505)
+- Android 인터랙티브: `aos_YYYYMMDD_HHMMSS` (예: aos_20260123_150530)
+- Android Watch: `aos_yymmdd_HHMM` (예: aos_260123_1505)
+- iOS 인터랙티브: `ios_YYYYMMDD_HHMMSS` (예: ios_20260215_150530)
+- iOS Watch: `ios_yymmdd_HHMM` (예: ios_260215_1505)
 
 **Watch 모드 파일명 형식:** `순번_화면이름.xml`
 
@@ -365,8 +379,8 @@ python tools/ui_dump.py --mask-existing
 ```
 기존 ui_dumps 파일 마스킹 시작...
 --------------------------------------------------
-마스킹 완료: ui_dumps/260123_1254/024_Remittance.xml
-마스킹 완료: ui_dumps/260123_1254/027_Edit_Info.xml
+마스킹 완료: ui_dumps/aos_260123_1254/024_Remittance.xml
+마스킹 완료: ui_dumps/aos_260123_1254/027_Edit_Info.xml
 --------------------------------------------------
 총 2개 파일 마스킹 완료
 ```

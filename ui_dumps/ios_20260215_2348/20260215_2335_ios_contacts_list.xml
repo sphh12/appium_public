@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AppiumAUT>
+  <XCUIElementTypeApplication type="XCUIElementTypeApplication" name="연락처" label="연락처" enabled="true" visible="true" accessible="false" x="0" y="0" width="402" height="874" index="0" traits="" processId="46100" bundleId="com.apple.MobileAddressBook">
+    <XCUIElementTypeWindow type="XCUIElementTypeWindow" enabled="true" visible="true" accessible="false" x="0" y="0" width="402" height="874" index="0" traits="">
+      <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="0" y="0" width="402" height="874" index="0" traits="">
+        <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="0" y="0" width="402" height="874" index="0" traits="">
+          <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="0" y="0" width="402" height="874" index="0" traits="">
+            <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="0" y="0" width="402" height="874" index="0" traits="">
+              <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="0" y="0" width="402" height="874" index="0" traits="">
+                <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="0" y="0" width="402" height="874" index="0" traits="">
+                  <XCUIElementTypeNavigationBar type="XCUIElementTypeNavigationBar" name="연락처" enabled="true" visible="true" accessible="false" x="0" y="62" width="402" height="54" index="0" traits="">
+                    <XCUIElementTypeButton type="XCUIElementTypeButton" name="BackButton" label="뒤로" enabled="true" visible="true" accessible="true" x="16" y="62" width="44" height="44" index="0" traits="Button"/>
+                    <XCUIElementTypeStaticText type="XCUIElementTypeStaticText" value="연락처" name="연락처" label="연락처" enabled="true" visible="true" accessible="true" x="178" y="73" width="45" height="22" index="1" traits="Header"/>
+                  </XCUIElementTypeNavigationBar>
+                  <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="0" y="0" width="402" height="874" index="1" traits="">
+                    <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="0" y="0" width="402" height="874" index="0" traits="">
+                      <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="0" y="0" width="402" height="874" index="0" traits="">
+                        <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="0" y="0" width="402" height="874" index="0" traits="">
+                          <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="0" y="0" width="402" height="874" index="0" traits="">
+                            <XCUIElementTypeOther type="XCUIElementTypeOther" name="ContactsListView" enabled="true" visible="true" accessible="false" x="0" y="0" width="402" height="874" index="0" traits="">
+                              <XCUIElementTypeCollectionView type="XCUIElementTypeCollectionView" enabled="true" visible="false" accessible="false" x="0" y="0" width="402" height="874" index="0" traits="">
+                                <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="false" accessible="false" x="-2" y="-1632" width="420" height="1846" index="0" traits=""/>
+                                <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="0" y="0" width="402" height="874" index="1" traits=""/>
+                                <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="0" y="0" width="402" height="874" index="2" traits=""/>
+                                <XCUIElementTypeCell type="XCUIElementTypeCell" name="a" label="a" enabled="true" visible="true" accessible="true" x="0" y="116" width="402" height="38" index="3" traits="Header">
+                                  <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="false" accessible="false" x="0" y="116" width="402" height="38" index="0" traits=""/>
+                                  <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="0" y="116" width="402" height="38" index="1" traits="">
+                                    <XCUIElementTypeStaticText type="XCUIElementTypeStaticText" value="A" name="A" label="A" enabled="true" visible="true" accessible="false" x="18" y="126" width="10" height="18" index="0" traits="StaticText"/>
+                                  </XCUIElementTypeOther>
+                                </XCUIElementTypeCell>
+                                <XCUIElementTypeOther type="XCUIElementTypeOther" name="섹션 인덱스" label="섹션 인덱스" enabled="true" visible="true" accessible="true" x="387" y="116" width="15" height="672" index="4" traits="Adjustable"/>
+                                <XCUIElementTypeCell type="XCUIElementTypeCell" name="John Appleseed" label="John Appleseed" enabled="true" visible="true" accessible="true" x="2" y="154" width="384" height="60" index="5" traits="">
+                                  <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="-14" y="154" width="416" height="60" index="0" traits="">
+                                    <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="-14" y="154" width="416" height="60" index="0" traits=""/>
+                                  </XCUIElementTypeOther>
+                                  <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="18" y="154" width="40" height="60" index="1" traits="">
+                                    <XCUIElementTypeButton type="XCUIElementTypeButton" name="John Appleseed님의 연락처 사진" label="John Appleseed님의 연락처 사진" enabled="true" visible="true" accessible="false" x="18" y="164" width="40" height="40" index="0" traits="Button">
+                                      <XCUIElementTypeImage type="XCUIElementTypeImage" enabled="true" visible="true" accessible="false" x="18" y="164" width="40" height="40" index="0" traits="Image"/>
+                                    </XCUIElementTypeButton>
+                                  </XCUIElementTypeOther>
+                                  <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="58" y="154" width="328" height="60" index="2" traits="">
+                                    <XCUIElementTypeStaticText type="XCUIElementTypeStaticText" value="John Appleseed" name="John Appleseed" label="John Appleseed" enabled="true" visible="true" accessible="false" x="68" y="174" width="127" height="21" index="0" traits="StaticText"/>
+                                  </XCUIElementTypeOther>
+                                </XCUIElementTypeCell>
+                                <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="18" y="154" width="368" height="1" index="6" traits=""/>
+                                <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="false" accessible="false" x="-2" y="214" width="420" height="98" index="7" traits=""/>
+                                <XCUIElementTypeCell type="XCUIElementTypeCell" name="b" label="b" enabled="true" visible="true" accessible="true" x="0" y="214" width="402" height="38" index="8" traits="Header">
+                                  <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="false" accessible="false" x="0" y="214" width="402" height="38" index="0" traits=""/>
+                                  <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="0" y="214" width="402" height="38" index="1" traits="">
+                                    <XCUIElementTypeStaticText type="XCUIElementTypeStaticText" value="B" name="B" label="B" enabled="true" visible="true" accessible="false" x="18" y="224" width="10" height="18" index="0" traits="StaticText"/>
+                                  </XCUIElementTypeOther>
+                                </XCUIElementTypeCell>
+                                <XCUIElementTypeCell type="XCUIElementTypeCell" name="Kate Bell" label="Kate Bell" enabled="true" visible="true" accessible="true" x="2" y="252" width="384" height="60" index="9" traits="">
+                                  <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="-14" y="252" width="416" height="60" index="0" traits="">
+                                    <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="-14" y="252" width="416" height="60" index="0" traits=""/>
+                                  </XCUIElementTypeOther>
+                                  <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="18" y="252" width="40" height="60" index="1" traits="">
+                                    <XCUIElementTypeButton type="XCUIElementTypeButton" name="Kate Bell님의 연락처 사진" label="Kate Bell님의 연락처 사진" enabled="true" visible="true" accessible="false" x="18" y="262" width="40" height="40" index="0" traits="Button">
+                                      <XCUIElementTypeImage type="XCUIElementTypeImage" enabled="true" visible="true" accessible="false" x="18" y="262" width="40" height="40" index="0" traits="Image"/>
+                                    </XCUIElementTypeButton>
+                                  </XCUIElementTypeOther>
+                                  <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="58" y="252" width="328" height="60" index="2" traits="">
+                                    <XCUIElementTypeStaticText type="XCUIElementTypeStaticText" value="Kate Bell" name="Kate Bell" label="Kate Bell" enabled="true" visible="true" accessible="false" x="68" y="272" width="69" height="21" index="0" traits="StaticText"/>
+                                  </XCUIElementTypeOther>
+                                </XCUIElementTypeCell>
+                                <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="18" y="252" width="368" height="1" index="10" traits=""/>
+                                <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="false" accessible="false" x="-2" y="312" width="420" height="158" index="11" traits=""/>
+                                <XCUIElementTypeCell type="XCUIElementTypeCell" name="h" label="h" enabled="true" visible="true" accessible="true" x="0" y="312" width="402" height="38" index="12" traits="Header">
+                                  <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="false" accessible="false" x="0" y="312" width="402" height="38" index="0" traits=""/>
+                                  <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="0" y="312" width="402" height="38" index="1" traits="">
+                                    <XCUIElementTypeStaticText type="XCUIElementTypeStaticText" value="H" name="H" label="H" enabled="true" visible="true" accessible="false" x="18" y="322" width="11" height="18" index="0" traits="StaticText"/>
+                                  </XCUIElementTypeOther>
+                                </XCUIElementTypeCell>
+                                <XCUIElementTypeCell type="XCUIElementTypeCell" name="Anna Haro" label="Anna Haro" enabled="true" visible="true" accessible="true" x="2" y="350" width="384" height="60" index="13" traits="">
+                                  <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="-14" y="350" width="416" height="60" index="0" traits="">
+                                    <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="-14" y="350" width="416" height="60" index="0" traits=""/>
+                                  </XCUIElementTypeOther>
+                                  <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="18" y="350" width="40" height="60" index="1" traits="">
+                                    <XCUIElementTypeButton type="XCUIElementTypeButton" name="Anna Haro님의 연락처 사진" label="Anna Haro님의 연락처 사진" enabled="true" visible="true" accessible="false" x="18" y="360" width="40" height="40" index="0" traits="Button">
+                                      <XCUIElementTypeImage type="XCUIElementTypeImage" enabled="true" visible="true" accessible="false" x="18" y="360" width="40" height="40" index="0" traits="Image"/>
+                                    </XCUIElementTypeButton>
+                                  </XCUIElementTypeOther>
+                                  <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="58" y="350" width="328" height="60" index="2" traits="">
+                                    <XCUIElementTypeStaticText type="XCUIElementTypeStaticText" value="Anna Haro" name="Anna Haro" label="Anna Haro" enabled="true" visible="true" accessible="false" x="68" y="370" width="82" height="21" index="0" traits="StaticText"/>
+                                  </XCUIElementTypeOther>
+                                </XCUIElementTypeCell>
+                                <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="18" y="350" width="368" height="1" index="14" traits=""/>
+                                <XCUIElementTypeCell type="XCUIElementTypeCell" name="Daniel Higgins Jr." label="Daniel Higgins Jr." enabled="true" visible="true" accessible="true" x="2" y="410" width="384" height="60" index="15" traits="">
+                                  <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="-14" y="410" width="416" height="60" index="0" traits="">
+                                    <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="-14" y="410" width="416" height="60" index="0" traits=""/>
+                                  </XCUIElementTypeOther>
+                                  <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="18" y="410" width="40" height="60" index="1" traits="">
+                                    <XCUIElementTypeButton type="XCUIElementTypeButton" name="Daniel Higgins Jr.님의 연락처 사진" label="Daniel Higgins Jr.님의 연락처 사진" enabled="true" visible="true" accessible="false" x="18" y="420" width="40" height="40" index="0" traits="Button">
+                                      <XCUIElementTypeImage type="XCUIElementTypeImage" enabled="true" visible="true" accessible="false" x="18" y="420" width="40" height="40" index="0" traits="Image"/>
+                                    </XCUIElementTypeButton>
+                                  </XCUIElementTypeOther>
+                                  <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="58" y="410" width="328" height="60" index="2" traits="">
+                                    <XCUIElementTypeStaticText type="XCUIElementTypeStaticText" value="Daniel Higgins Jr." name="Daniel Higgins Jr." label="Daniel Higgins Jr." enabled="true" visible="true" accessible="false" x="68" y="430" width="135" height="21" index="0" traits="StaticText"/>
+                                  </XCUIElementTypeOther>
+                                </XCUIElementTypeCell>
+                                <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="68" y="409" width="318" height="1" index="16" traits=""/>
+                                <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="false" accessible="false" x="-2" y="470" width="420" height="98" index="17" traits=""/>
+                                <XCUIElementTypeCell type="XCUIElementTypeCell" name="t" label="t" enabled="true" visible="true" accessible="true" x="0" y="470" width="402" height="38" index="18" traits="Header">
+                                  <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="false" accessible="false" x="0" y="470" width="402" height="38" index="0" traits=""/>
+                                  <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="0" y="470" width="402" height="38" index="1" traits="">
+                                    <XCUIElementTypeStaticText type="XCUIElementTypeStaticText" value="T" name="T" label="T" enabled="true" visible="true" accessible="false" x="18" y="480" width="10" height="18" index="0" traits="StaticText"/>
+                                  </XCUIElementTypeOther>
+                                </XCUIElementTypeCell>
+                                <XCUIElementTypeCell type="XCUIElementTypeCell" name="David Taylor" label="David Taylor" enabled="true" visible="true" accessible="true" x="2" y="508" width="384" height="60" index="19" traits="">
+                                  <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="-14" y="508" width="416" height="60" index="0" traits="">
+                                    <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="-14" y="508" width="416" height="60" index="0" traits=""/>
+                                  </XCUIElementTypeOther>
+                                  <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="18" y="508" width="40" height="60" index="1" traits="">
+                                    <XCUIElementTypeButton type="XCUIElementTypeButton" name="David Taylor님의 연락처 사진" label="David Taylor님의 연락처 사진" enabled="true" visible="true" accessible="false" x="18" y="518" width="40" height="40" index="0" traits="Button">
+                                      <XCUIElementTypeImage type="XCUIElementTypeImage" enabled="true" visible="true" accessible="false" x="18" y="518" width="40" height="40" index="0" traits="Image"/>
+                                    </XCUIElementTypeButton>
+                                  </XCUIElementTypeOther>
+                                  <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="58" y="508" width="328" height="60" index="2" traits="">
+                                    <XCUIElementTypeStaticText type="XCUIElementTypeStaticText" value="David Taylor" name="David Taylor" label="David Taylor" enabled="true" visible="true" accessible="false" x="68" y="528" width="96" height="21" index="0" traits="StaticText"/>
+                                  </XCUIElementTypeOther>
+                                </XCUIElementTypeCell>
+                                <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="18" y="508" width="368" height="1" index="20" traits=""/>
+                                <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="-2" y="568" width="420" height="1846" index="21" traits=""/>
+                                <XCUIElementTypeCell type="XCUIElementTypeCell" name="z" label="z" enabled="true" visible="true" accessible="true" x="0" y="568" width="402" height="38" index="22" traits="Header">
+                                  <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="false" accessible="false" x="0" y="568" width="402" height="38" index="0" traits=""/>
+                                  <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="0" y="568" width="402" height="38" index="1" traits="">
+                                    <XCUIElementTypeStaticText type="XCUIElementTypeStaticText" value="Z" name="Z" label="Z" enabled="true" visible="true" accessible="false" x="18" y="578" width="10" height="18" index="0" traits="StaticText"/>
+                                  </XCUIElementTypeOther>
+                                </XCUIElementTypeCell>
+                                <XCUIElementTypeCell type="XCUIElementTypeCell" name="Hank M. Zakroff" label="Hank M. Zakroff" enabled="true" visible="true" accessible="true" x="2" y="606" width="384" height="60" index="23" traits="">
+                                  <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="-14" y="606" width="416" height="60" index="0" traits="">
+                                    <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="-14" y="606" width="416" height="60" index="0" traits=""/>
+                                  </XCUIElementTypeOther>
+                                  <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="18" y="606" width="40" height="60" index="1" traits="">
+                                    <XCUIElementTypeButton type="XCUIElementTypeButton" name="Hank M. Zakroff님의 연락처 사진" label="Hank M. Zakroff님의 연락처 사진" enabled="true" visible="true" accessible="false" x="18" y="616" width="40" height="40" index="0" traits="Button">
+                                      <XCUIElementTypeImage type="XCUIElementTypeImage" enabled="true" visible="true" accessible="false" x="18" y="616" width="40" height="40" index="0" traits="Image"/>
+                                    </XCUIElementTypeButton>
+                                  </XCUIElementTypeOther>
+                                  <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="58" y="606" width="328" height="60" index="2" traits="">
+                                    <XCUIElementTypeStaticText type="XCUIElementTypeStaticText" value="Hank M. Zakroff" name="Hank M. Zakroff" label="Hank M. Zakroff" enabled="true" visible="true" accessible="false" x="68" y="626" width="126" height="21" index="0" traits="StaticText"/>
+                                  </XCUIElementTypeOther>
+                                </XCUIElementTypeCell>
+                                <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="18" y="606" width="368" height="1" index="24" traits=""/>
+                                <XCUIElementTypeCell type="XCUIElementTypeCell" enabled="true" visible="true" accessible="false" x="0" y="666" width="402" height="52" index="25" traits="">
+                                  <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="false" accessible="false" x="0" y="666" width="402" height="52" index="0" traits=""/>
+                                  <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="0" y="666" width="402" height="52" index="1" traits="">
+                                    <XCUIElementTypeStaticText type="XCUIElementTypeStaticText" enabled="true" visible="false" accessible="false" x="8" y="692" width="386" height="0" index="0" traits="StaticText"/>
+                                  </XCUIElementTypeOther>
+                                </XCUIElementTypeCell>
+                                <XCUIElementTypeOther type="XCUIElementTypeOther" value="0%" name="수평 스크롤 막대, 1페이지" label="수평 스크롤 막대, 1페이지" enabled="true" visible="true" accessible="false" x="62" y="755" width="278" height="30" index="26" traits="Adjustable">
+                                  <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="330" y="782" width="7" height="3" index="0" traits=""/>
+                                </XCUIElementTypeOther>
+                                <XCUIElementTypeOther type="XCUIElementTypeOther" value="0%" name="수평 스크롤 막대, 1페이지" label="수평 스크롤 막대, 1페이지" enabled="true" visible="true" accessible="false" x="62" y="755" width="278" height="30" index="27" traits="Adjustable">
+                                  <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="330" y="782" width="7" height="3" index="0" traits=""/>
+                                </XCUIElementTypeOther>
+                              </XCUIElementTypeCollectionView>
+                            </XCUIElementTypeOther>
+                          </XCUIElementTypeOther>
+                        </XCUIElementTypeOther>
+                      </XCUIElementTypeOther>
+                    </XCUIElementTypeOther>
+                  </XCUIElementTypeOther>
+                  <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="0" y="0" width="402" height="874" index="2" traits="">
+                    <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="0" y="0" width="402" height="874" index="0" traits="">
+                      <XCUIElementTypeToolbar type="XCUIElementTypeToolbar" name="Toolbar" label="도구 막대" enabled="true" visible="true" accessible="false" x="0" y="788" width="402" height="86" index="0" traits="">
+                        <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="28" y="798" width="346" height="48" index="0" traits="">
+                          <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="28" y="798" width="346" height="48" index="0" traits="">
+                            <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="false" accessible="false" x="28" y="798" width="0" height="0" index="0" traits="">
+                              <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="28" y="798" width="286" height="48" index="0" traits="">
+                                <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="28" y="798" width="286" height="48" index="0" traits="">
+                                  <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="33" y="803" width="277" height="38" index="0" traits="">
+                                    <XCUIElementTypeSearchField type="XCUIElementTypeSearchField" value="검색" name="검색" label="검색" enabled="true" visible="true" accessible="true" x="33" y="803" width="277" height="38" index="0" placeholderValue="검색" traits="SearchField">
+                                      <XCUIElementTypeButton type="XCUIElementTypeButton" name="Dictate" label="받아쓰기" enabled="true" visible="true" accessible="false" x="275" y="811" width="19" height="22" index="0" traits="Button"/>
+                                      <XCUIElementTypeImage type="XCUIElementTypeImage" name="magnifyingglass" label="검색" enabled="true" visible="true" accessible="false" x="46" y="812" width="21" height="20" index="1" traits="Image"/>
+                                      <XCUIElementTypeButton type="XCUIElementTypeButton" name="Dictate" label="받아쓰기" enabled="true" visible="true" accessible="false" x="275" y="811" width="19" height="22" index="2" traits="Button"/>
+                                    </XCUIElementTypeSearchField>
+                                  </XCUIElementTypeOther>
+                                </XCUIElementTypeOther>
+                              </XCUIElementTypeOther>
+                              <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="326" y="798" width="48" height="48" index="1" traits="">
+                                <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="326" y="798" width="48" height="48" index="0" traits="">
+                                  <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="331" y="803" width="38" height="38" index="0" traits="">
+                                    <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="331" y="803" width="38" height="38" index="0" traits="">
+                                      <XCUIElementTypeButton type="XCUIElementTypeButton" name="추가" label="추가" enabled="true" visible="true" accessible="true" x="331" y="803" width="38" height="38" index="0" traits="Button"/>
+                                    </XCUIElementTypeOther>
+                                  </XCUIElementTypeOther>
+                                </XCUIElementTypeOther>
+                              </XCUIElementTypeOther>
+                            </XCUIElementTypeOther>
+                          </XCUIElementTypeOther>
+                        </XCUIElementTypeOther>
+                      </XCUIElementTypeToolbar>
+                    </XCUIElementTypeOther>
+                  </XCUIElementTypeOther>
+                </XCUIElementTypeOther>
+              </XCUIElementTypeOther>
+            </XCUIElementTypeOther>
+            <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="0" y="0" width="402" height="874" index="1" traits="">
+              <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" accessible="false" x="0" y="0" width="402" height="874" index="0" traits=""/>
+            </XCUIElementTypeOther>
+          </XCUIElementTypeOther>
+        </XCUIElementTypeOther>
+      </XCUIElementTypeOther>
+    </XCUIElementTypeWindow>
+    <XCUIElementTypeWindow type="XCUIElementTypeWindow" enabled="true" visible="false" accessible="false" x="0" y="0" width="402" height="874" index="1" traits="">
+      <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="false" accessible="false" x="0" y="0" width="402" height="874" index="0" traits="">
+        <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="false" accessible="false" x="0" y="0" width="402" height="874" index="0" traits=""/>
+      </XCUIElementTypeOther>
+    </XCUIElementTypeWindow>
+  </XCUIElementTypeApplication>
+</AppiumAUT>

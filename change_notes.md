@@ -1,5 +1,259 @@
 # Change Notes
 
+## 2026-02-16 (2차)
+
+### 앱 화면 자동 탐색 스크립트 (explore_app.py) 신규 생성
+
+- **`tools/explore_app.py` 신규 생성**: 앱의 전체 화면/메뉴 구조를 자동 탐색하고 UI Dump를 캡처하는 스크립트
+  - 하단 탭 5개 (Home, History, Card, Event, Profile) 자동 탐색
+  - 햄버거 메뉴(Side Drawer) 8개 항목 자동 진입 및 캡처
+  - 서브 탭 (HorizontalScrollView, TabLayout) 자동 감지 및 캡처
+  - Profile 내 메뉴 항목 자동 탐색 (비밀번호/로그아웃 등 위험 항목 제외)
+
+- **Live / Staging 앱 전환 기능**
+  - `USE_LIVE` 환경변수로 전환 (기본: `true`)
+  - Live: `com.gmeremit.online.gmeremittance_native` / LIVE_ID, LIVE_PW 사용
+  - Staging: `com.gmeremit.online.gmeremittance_native.stag` / STG_ID, STG_PW 사용
+  - 앱 액티비티도 자동 전환 (Live: SplashScreen, Staging: ActivityMain)
+
+- **팝업 자동 처리 시스템**
+  - Renew Auto Debit: `btn_okay` 클릭 → `iv_back` 복귀 (테스트 환경 팝업)
+  - In-App Banner: `imgvCross` (X), `btnTwo` (Cancel) 우선 처리
+  - 공통 닫기: `btn_close`, `btnCancel`, `content-desc=close`
+  - 바텀시트: `touch_outside`, `design_bottom_sheet` → 백키
+  - 앱 종료 방지 안전장치: `current_package` 확인 후 백키, 종료 시 `activate_app` 재활성화
+  - **팝업 캡처 기능**: 팝업 닫기 전 UI Dump 자동 저장 (모듈 레벨 `_popup_capture_folder`)
+
+- **안정성 기능**
+  - `ensure_app_running()`: 앱 포그라운드 확인 + `activate_app` 재활성화
+  - `verify_app_screen()`: 앱/팝업/시스템UI/unknown 상태 분류
+  - `ensure_clean_screen()`: 팝업 완전 제거 후 앱 화면 보장
+  - `go_back_to_home()`: 어떤 화면에서든 홈으로 안정 복귀 (5단계 전략)
+  - UiAutomator2 크래시 자동 복구 (드라이버 재생성)
+  - `noReset=True` + `appPackage/appActivity` 방식 (APK 재설치 방지)
+
+- **실행 방법**
+  ```bash
+  USE_LIVE=true /Users/sph/appium/venv/bin/python3 tools/explore_app.py
+  ```
+
+### APP_STRUCTURE.md 신규 생성
+
+- 앱 전체 화면 구조 문서화 (자동화 코드 생성용 기반 자료)
+- UI Dump XML 분석 기반으로 10개 화면 구조 확인 완료
+  - Home, Hamburger Menu, Notification, Link Bank Account, Settings 등
+- 10개 미확인 화면 목록 기록 (팝업 오버레이로 인한 캡처 실패분)
+- 각 화면별 resource-id, content-desc, 텍스트 등 UI 요소 상세 기록
+
+### Live APK 설치
+
+- Live Release APK (`GME_v7.14.0_03_02_2026 09_35-live-release.apk`) adb install 완료
+- Staging 앱의 불필요한 팝업 과다 발생으로 Live 앱으로 전환 결정
+
+추가 파일:
+- [tools/explore_app.py](tools/explore_app.py) (신규)
+- [docs/APP_STRUCTURE.md](docs/APP_STRUCTURE.md) (신규)
+
+---
+
+## 2026-02-16
+
+### Allure 대시보드 플랫폼 필터 추가
+
+- **Platform 드롭다운 필터 추가**: `Platform: 전체` / `Android` / `iOS` 선택 가능
+  - 기존에는 검색창에 "ios"를 직접 입력해야만 iOS 결과를 찾을 수 있었음
+  - 디버깅 과정에서 생성된 다수의 Android 로그로 인해 iOS 결과가 뒤로 밀리는 문제 해결
+- Result 필터 옆에 배치, Clear 버튼 클릭 시 함께 초기화
+
+변경 파일:
+- [allure-reports/dashboard/index.html](allure-reports/dashboard/index.html)
+- [tools/update_dashboard.py](tools/update_dashboard.py)
+
+### 쉘 스크립트 구조 개편 (플랫폼별 래퍼)
+
+- **`run-aos.sh` 신규 생성**: Android 전용 래퍼 (`run-app.sh --platform android`)
+- **`run-stg.sh` / `run-live.sh` 삭제**: `run-aos.sh --stg` / `run-aos.sh --live`로 대체
+- 최종 구조: `run-app.sh`(메인 엔진) + `run-aos.sh`(Android) + `run-ios.sh`(iOS)
+
+### run-app.sh 환경 호환성 수정 (macOS/Windows 크로스 플랫폼)
+
+- **`~/.zshrc` 자동 로드 추가**: bash 스크립트에서 `ANDROID_HOME`, `npx`, `allure` 등 PATH 누락 방지
+  - `if [[ -f "$HOME/.zshrc" ]]` 조건이라 Windows에서는 실행 안 됨 (안전)
+- **ANDROID_HOME 자동 탐색**: `adb` 미발견 시 macOS 기본 SDK 경로(`~/Library/Android/sdk`) 자동 탐색
+- **Appium 드라이버 감지 수정**: `appium driver list`가 stderr로 출력 → `2>/dev/null`을 `2>&1`로 변경
+  - UiAutomator2, XCUITest 모두 동일 수정
+  - grep 패턴에서 불필요한 `@` 제거
+- **PROJECT_ROOT 경로 정규화**: `$SCRIPT_DIR/..` → `$(cd "$SCRIPT_DIR/.." && pwd)` 로 절대 경로 변환
+- **.env CRLF 방지**: `tr -d '\r'` 추가하여 APK 파일명 뒤 `\r` 제거
+- **CMD 실행 방식 변경**: `$CMD` → `eval $CMD` (대괄호/공백 등 특수문자 포함 경로 처리)
+
+### APK 파일명 변경
+
+- Appium(Node.js)이 대괄호 `[]`를 glob 패턴으로 해석하여 파일 접근 실패
+- `[Stg]GME_7.13.0.apk` → `Stg_GME_7.13.0.apk` 로 변경
+- `[LiveTest]GME_7.14.0.apk` → `LiveTest_GME_7.14.0.apk` 로 변경
+- `.env` 파일 및 `run-app.sh` 기본값도 함께 업데이트
+
+### CLAUDE.md 업데이트
+
+- 쉘 스크립트 CRLF 방지 규칙 추가: `.sh` 파일 생성 후 반드시 LF 변환 수행
+
+### Windows 환경 호환 참고사항
+
+- macOS 전용 수정사항(`~/.zshrc` 로드, SDK 경로 탐색)은 조건부 실행이라 Windows에 영향 없음
+- Windows에서 git pull 후 필요한 조치:
+  1. APK 파일명 변경 (`[Stg]` → `Stg_`, `[LiveTest]` → `LiveTest_`)
+  2. `.env`의 `STG_APK` 값 맞추기
+  3. `run-stg.sh`/`run-live.sh` 대신 `run-aos.sh --stg`/`run-aos.sh --live` 사용
+
+변경 파일:
+- [shell/run-aos.sh](shell/run-aos.sh) (신규)
+- [shell/run-app.sh](shell/run-app.sh)
+- [.claude/CLAUDE.md](.claude/CLAUDE.md)
+- .env (APK 파일명 변경)
+
+삭제 파일:
+- shell/run-stg.sh
+- shell/run-live.sh
+
+---
+
+### iOS 연락처 앱 테스트 완성
+
+- **핵심 버그 수정**: iOS 한국어 이름 표시 형식 차이 해결
+  - iOS 연락처는 `"홍길동"` (성+이름, 공백 없음) 형식으로 표시
+  - 기존 코드의 `"길동 홍"` (이름 + 공백 + 성) → 목록에서 검색 실패
+- **앱 상태 초기화 안정화**: `terminate_app()` + `activate_app()`으로 fixture 개선
+  - 이전 테스트 실패로 앱이 비정상 화면에 남아있는 문제 해결
+- 최종 테스트 **1 passed in 75.63s** 달성
+
+변경 파일:
+- [tests/ios/ios_contacts_test.py](tests/ios/ios_contacts_test.py)
+
+### UI Dump 폴더 플랫폼 프리픽스 도입
+
+- **Android**: `aos_` 프리픽스 추가 (`tools/ui_dump.py`)
+- **iOS**: `ios_` 프리픽스 추가 (`tools/ui_dump_ios.py`)
+- 모든 캡처 모드(단일/Interactive/Watch)에서 플랫폼별 폴더 생성
+
+| 모드 | Android | iOS |
+|------|---------|-----|
+| 단일 캡처 | `aos_20260216_1430/` | `ios_20260216_1430/` |
+| Interactive | `aos_20260216_1430/` | `ios_20260216_1430/` |
+| Watch | `aos_260216_1430/` | `ios_260216_1430/` |
+
+- 기존 폴더명도 변경:
+  - `260123_1254/` → `aos_260123_1254/`
+  - `261022_132638/` → `aos_261022_132638/`
+  - iOS 단일 파일 → `ios_20260215_0009/`, `ios_20260215_2348/` 폴더로 이동
+
+변경 파일:
+- [tools/ui_dump.py](tools/ui_dump.py)
+- [tools/ui_dump_ios.py](tools/ui_dump_ios.py)
+
+### 문서 업데이트 (프리픽스 반영)
+
+- 폴더 구조 예시, Watch 출력 경로 등 `aos_`/`ios_` 프리픽스 반영
+
+변경 파일:
+- [docs/UI_DUMP_GUIDE.md](docs/UI_DUMP_GUIDE.md)
+- [docs/CODING_GUIDELINES.md](docs/CODING_GUIDELINES.md)
+- [docs/IOS_TEST_GUIDE.md](docs/IOS_TEST_GUIDE.md)
+- [tests/android/basic_01_test.py](tests/android/basic_01_test.py) - docstring 경로 수정
+
+### iOS 테스트 작성 가이드 생성
+
+- UI Dump 기반 iOS 테스트 작성 전체 흐름 정리
+- 시행착오 7가지 및 해결 방법 문서화
+  - 한국어 이름 형식, StaleElement 방지, Cell/TextField 구분, 키보드 닫기 등
+- 헬퍼 메서드 모음, iOS vs Android 차이표, 체크리스트 포함
+
+추가 파일:
+- [docs/IOS_TEST_GUIDE.md](docs/IOS_TEST_GUIDE.md) (신규)
+
+### CLAUDE.md 워크플로우 추가
+
+- **Git Push 워크플로우**: 트리거 키워드 → change_notes 작성 → 푸시
+- **자동화 코드 작성 워크플로우**: OS 확인 → UI Dump → 코드 구현 → Allure 결과 → 가이드 업데이트
+- **작업 완료 후 규칙**: change_notes.md 작성 의무화
+
+변경 파일:
+- [.claude/CLAUDE.md](.claude/CLAUDE.md)
+
+---
+
+## 2026-02-15
+
+### iOS UI Dump 도구 생성
+
+- Android 버전(`ui_dump.py`)과 별도로 iOS 전용 UI Dump 도구 생성
+- 단일 캡처, Interactive(-i), Watch(-w), `--mask-existing` 모드 지원
+- iOS 전용 요소 분석: `XCUIElementType` 기반 통계, NavigationBar에서 화면 이름 추출
+- `XCUITestOptions` + `IOS_CAPS` 사용
+
+추가 파일:
+- [tools/ui_dump_ios.py](tools/ui_dump_ios.py) (신규)
+
+### iOS 연락처 앱 테스트 시나리오 작성
+
+- 시뮬레이터 내장 연락처 앱 대상 (`bundleId: com.apple.MobileAddressBook`)
+- 시나리오: 연락처 추가 → 정보 입력(성/이름/직장/전화번호) → 저장 → 조회 검증 → 테스트 데이터 정리
+- 연락처 목록/추가 화면 UI Dump 캡처 (`ios_20260215_2348/`)
+
+주요 구현 패턴:
+- TextField 입력: 클릭 → 재탐색 → `send_keys` (StaleElement 방지)
+- 동적 요소: "전화번호 추가" Cell 클릭 → "휴대전화" TextField 생성 후 XPath로 탐색
+- 키보드 닫기: NavigationBar 탭
+- 전화번호 검증: `page_source`에서 숫자만 추출하여 비교
+
+추가 파일:
+- [tests/ios/ios_contacts_test.py](tests/ios/ios_contacts_test.py) (신규)
+
+---
+
+## 2026-02-14
+
+### iOS 자동화 환경 구축
+
+- **Xcode 설치 및 iOS 시뮬레이터 설정**
+  - Xcode 설치 → Settings > Platforms에서 iOS 26.2 추가
+  - iPhone 17 시뮬레이터 부팅 확인
+- **Appium XCUITest 드라이버 설치**
+  - `appium driver install xcuitest`
+  - `appium-doctor --ios` 환경 검증 통과 (필수 항목 all passed)
+- **PATH 설정 확인**: Homebrew/Node.js는 이미 설치되어 있었으나 세션에서 PATH 미로드 → `~/.zprofile`에 기존 설정 확인
+
+### iOS 시뮬레이터 첫 연결 테스트
+
+- Safari 브라우저 기반 iOS 테스트 4건 작성 및 전체 통과
+  - 시뮬레이터 연결, 화면 크기 확인, URL 열기, 페이지 소스 확인
+- Safari Web Inspector 활성화 및 `webviewConnectTimeout` 설정으로 타임아웃 해결
+
+추가 파일:
+- [tests/ios/test_ios_first.py](tests/ios/test_ios_first.py) (신규)
+
+### iOS Capabilities 설정 업데이트
+
+- `IOS_CAPS`의 `platformVersion`을 `"17.0"` → `"26.2"`로 수정
+- 환경변수 대응: `IOS_DEVICE_NAME`, `IOS_PLATFORM_VERSION`
+
+변경 파일:
+- [config/capabilities.py](config/capabilities.py)
+
+### iOS 환경 설정 가이드 생성
+
+- macOS + Xcode + 시뮬레이터 + Appium 설정 전체 절차 문서화
+- 시뮬레이터 관리, Safari 설정, 에러 트러블슈팅 포함
+
+추가 파일:
+- [docs/IOS_SETUP_GUIDE.md](docs/IOS_SETUP_GUIDE.md) (신규)
+
+### 기타
+
+- 컴퓨터 이름 변경: `hanseungpil-ui-MacBookPro` → `sph-mbp`
+
+---
+
 ## 2026-02-04
 
 ### 앱 언어 설정 모듈 추가 (language.py)

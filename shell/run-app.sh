@@ -5,7 +5,9 @@
 #
 # Options:
 #   --platform    : android or ios (default: android)
-#   --app         : path to APK or IPA file
+#   --stg         : use Staging APK (default for Android)
+#   --live        : use Live APK
+#   --app         : path to APK or IPA file (overrides --stg/--live)
 #   --test        : specific test to run (e.g., test_Login)
 #   --files       : space-separated test paths to run in order (quote the value)
 #   --all         : run all tests
@@ -14,7 +16,13 @@
 #   --skip-check  : skip prerequisite checks
 #   --no-auto     : don't auto-start missing prerequisites
 
+# ~/.zshrc 환경변수 로드 (bash에서 실행 시 ANDROID_HOME, nvm 등 PATH 누락 방지)
+if [[ -f "$HOME/.zshrc" ]]; then
+    source "$HOME/.zshrc" 2>/dev/null
+fi
+
 PLATFORM="android"
+ENV_TYPE=""
 TEST_NAME=""
 TEST_FILES=""
 APP_PATH=""
@@ -69,6 +77,14 @@ while [[ $# -gt 0 ]]; do
             AUTO_START=false
             shift
             ;;
+        --stg)
+            ENV_TYPE="stg"
+            shift
+            ;;
+        --live)
+            ENV_TYPE="live"
+            shift
+            ;;
         --app)
             APP_PATH="$2"
             shift 2
@@ -78,7 +94,9 @@ while [[ $# -gt 0 ]]; do
             echo ""
             echo "Options:"
             echo "  --platform <android|ios>  Set test platform (default: android)"
-            echo "  --app <path>              Path to APK or IPA file"
+            echo "  --stg                     Use Staging APK (default for Android)"
+            echo "  --live                    Use Live APK"
+            echo "  --app <path>              Path to APK or IPA file (overrides --stg/--live)"
             echo "  --test <test_name>        Run specific test (e.g., test_Login)"
             echo "  --files \"<paths...>\"     Run specific test files in given order"
             echo "  --<file>                  Shorthand for tests/<platform>/<file>.py (e.g., --xml_test or --gme1_test)"
@@ -90,13 +108,16 @@ while [[ $# -gt 0 ]]; do
             echo "  --help                    Show this help message"
             echo ""
             echo "Examples:"
-            echo "  ./shell/run-app.sh --test test_Login"
-            echo "  ./shell/run-app.sh --app apk/[Stg]GME_7.13.0.apk --test test_Login"
-            echo "  ./shell/run-app.sh --files \"tests/android/gme1_test.py tests/android/xml_test.py\"";
-            echo "  ./shell/run-app.sh --xml_test"
-            echo "  ./shell/run-app.sh --gme1_test --test test_Login"
-            echo "  ./shell/run-app.sh --all --report"
-            echo "  ./shell/run-app.sh --test test_Login --generate"
+            echo "  ./shell/run-app.sh --basic_01_test               # STG APK (default)"
+            echo "  ./shell/run-app.sh --basic_01_test --stg         # STG APK (explicit)"
+            echo "  ./shell/run-app.sh --basic_01_test --live        # Live APK"
+            echo "  ./shell/run-app.sh --gme1_test --test test_Login # STG + specific test"
+            echo "  ./shell/run-app.sh --app apk/custom.apk          # Custom APK"
+            echo "  ./shell/run-app.sh --all --report                # All tests + report"
+            echo ""
+            echo "iOS Examples:"
+            echo "  ./shell/run-ios.sh --ios_contacts_test           # iOS test"
+            echo "  ./shell/run-ios.sh --all                         # All iOS tests"
             exit 0
             ;;
         *)
@@ -132,6 +153,39 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+# ========================================
+# APK 자동 설정 (Android 전용, --app 미지정 시)
+# ========================================
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+if [[ "$PLATFORM" == "android" && -z "$APP_PATH" ]]; then
+    # 기본값: stg
+    if [[ -z "$ENV_TYPE" ]]; then
+        ENV_TYPE="stg"
+    fi
+
+    # .env 파일에서 APK 파일명 로드 (tr -d '\r'로 CRLF 방지)
+    if [[ -f "$PROJECT_ROOT/.env" ]]; then
+        if [[ "$ENV_TYPE" == "stg" ]]; then
+            ENV_APK=$(grep -E '^STG_APK=' "$PROJECT_ROOT/.env" | cut -d'=' -f2- | tr -d '\r')
+        elif [[ "$ENV_TYPE" == "live" ]]; then
+            ENV_APK=$(grep -E '^LIVE_APK=' "$PROJECT_ROOT/.env" | cut -d'=' -f2- | tr -d '\r')
+        fi
+    fi
+
+    # .env에서 못 읽으면 기본값 사용
+    if [[ -z "$ENV_APK" ]]; then
+        if [[ "$ENV_TYPE" == "stg" ]]; then
+            ENV_APK="${STG_APK:-Stg_GME_7.13.0.apk}"
+        elif [[ "$ENV_TYPE" == "live" ]]; then
+            ENV_APK="${LIVE_APK:-GME_v7.14.0_03_02_2026 09_35-live-release.apk}"
+        fi
+    fi
+
+    APP_PATH="$PROJECT_ROOT/apk/$ENV_APK"
+fi
 
 echo "========================================"
 echo "  Appium Mobile Test Runner"
@@ -182,84 +236,150 @@ if [[ "$SKIP_CHECK" == false ]]; then
         fi
     fi
 
-    # Check 2: Android Emulator / Device
-    echo -n "  - Android Device/Emulator:  "
-    if command -v adb &> /dev/null; then
-        # Suppress adb daemon messages
-        adb start-server > /dev/null 2>&1
-        sleep 1
+    # Check 2: Device / Emulator / Simulator (플랫폼별 분기)
+    if [[ "$PLATFORM" == "ios" ]]; then
+        # ---- iOS Simulator 점검 ----
+        echo -n "  - iOS Simulator:            "
+        if command -v xcrun &> /dev/null; then
+            BOOTED_SIM=$(xcrun simctl list devices booted 2>/dev/null | grep -c "Booted")
+            if [[ $BOOTED_SIM -gt 0 ]]; then
+                SIM_NAME=$(xcrun simctl list devices booted 2>/dev/null | grep "Booted" | head -1 | sed 's/^[[:space:]]*//' | sed 's/ (.*$//')
+                echo -e "${GREEN}Running ($SIM_NAME)${NC}"
+                DEVICE_CONNECTED=true
+            else
+                echo -e "${RED}Not Running${NC}"
+                if [[ "$AUTO_START" == true ]]; then
+                    echo -e "    ${BLUE}[AUTO] Starting iOS Simulator...${NC}"
 
-        DEVICE_COUNT=$(adb devices 2>/dev/null | grep -w "device" | wc -l)
-        if [[ $DEVICE_COUNT -gt 0 ]]; then
-            DEVICE_NAME=$(adb devices 2>/dev/null | grep -w "device" | head -1 | cut -f1)
-            echo -e "${GREEN}Connected ($DEVICE_NAME)${NC}"
-            DEVICE_CONNECTED=true
-        else
-            echo -e "${RED}Not Connected${NC}"
-            if [[ "$AUTO_START" == true ]]; then
-                echo -e "    ${BLUE}[AUTO] Starting Android emulator...${NC}"
+                    # 사용 가능한 iPhone 시뮬레이터 찾기
+                    SIM_UDID=$(xcrun simctl list devices available 2>/dev/null | grep "iPhone" | head -1 | grep -oE '[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}')
+                    SIM_NAME=$(xcrun simctl list devices available 2>/dev/null | grep "iPhone" | head -1 | sed 's/^[[:space:]]*//' | sed 's/ (.*$//')
 
-                # Preferred emulator: Pixel_6, otherwise use first available
-                EMULATOR_NAME=$(emulator -list-avds 2>/dev/null | grep -i "Pixel_6" | head -1)
-                if [[ -z "$EMULATOR_NAME" ]]; then
-                    EMULATOR_NAME=$(emulator -list-avds 2>/dev/null | head -1)
-                fi
+                    if [[ -n "$SIM_UDID" ]]; then
+                        echo -e "    ${BLUE}[AUTO] Found simulator: $SIM_NAME${NC}"
+                        xcrun simctl boot "$SIM_UDID" 2>/dev/null
+                        open -a Simulator 2>/dev/null
+                        echo -e "    ${BLUE}[AUTO] Waiting for simulator to boot...${NC}"
 
-                if [[ -n "$EMULATOR_NAME" ]]; then
-                    echo -e "    ${BLUE}[AUTO] Found emulator: $EMULATOR_NAME${NC}"
-                    emulator -avd "$EMULATOR_NAME" -no-snapshot-load > /dev/null 2>&1 &
-                    EMULATOR_PID=$!
-                    echo -e "    ${BLUE}[AUTO] Waiting for emulator to boot (this may take a while)...${NC}"
-
-                    # Wait for emulator to boot (max 120 seconds)
-                    for i in {1..120}; do
-                        sleep 2
-                        BOOT_COMPLETED=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
-                        if [[ "$BOOT_COMPLETED" == "1" ]]; then
-                            DEVICE_NAME=$(adb devices 2>/dev/null | grep -w "device" | head -1 | cut -f1)
-                            echo -e "    ${GREEN}[OK] Emulator started ($DEVICE_NAME)${NC}"
-                            DEVICE_CONNECTED=true
-
-                            # Some environments report boot completed before ADB is fully in 'device' state.
-                            # Wait a bit longer to avoid Appium timing out while searching for a connected device.
-                            echo -e "    ${BLUE}[AUTO] Waiting for ADB to be ready...${NC}"
-                            ADB_READY=false
-                            for j in {1..30}; do
-                                STATE=$(adb get-state 2>/dev/null | tr -d '\r')
-                                if [[ "$STATE" == "device" ]]; then
-                                    ADB_READY=true
-                                    break
-                                fi
-                                sleep 2
-                            done
-
-                            if [[ "$ADB_READY" == true ]]; then
-                                echo -e "    ${GREEN}[OK] ADB is ready${NC}"
-                            else
-                                echo -e "    ${RED}[FAIL] ADB not ready (still offline).${NC}"
-                                DEVICE_CONNECTED=false
+                        # 시뮬레이터 부팅 대기 (최대 60초)
+                        for i in {1..30}; do
+                            sleep 2
+                            BOOTED=$(xcrun simctl list devices booted 2>/dev/null | grep -c "Booted")
+                            if [[ $BOOTED -gt 0 ]]; then
+                                echo -e "    ${GREEN}[OK] Simulator started ($SIM_NAME)${NC}"
+                                DEVICE_CONNECTED=true
+                                break
                             fi
-                            break
-                        fi
-                        # Show progress every 10 seconds
-                        if (( i % 5 == 0 )); then
-                            echo -e "    ${BLUE}[AUTO] Still waiting... (${i}s)${NC}"
-                        fi
-                    done
+                            if (( i % 5 == 0 )); then
+                                echo -e "    ${BLUE}[AUTO] Still waiting... ($((i*2))s)${NC}"
+                            fi
+                        done
 
-                    if [[ "$DEVICE_CONNECTED" == false ]]; then
-                        echo -e "    ${RED}[FAIL] Emulator boot timeout${NC}"
+                        if [[ "$DEVICE_CONNECTED" == false ]]; then
+                            echo -e "    ${RED}[FAIL] Simulator boot timeout${NC}"
+                        fi
+                    else
+                        echo -e "    ${RED}[FAIL] No iPhone simulator found. Create one in Xcode.${NC}"
                     fi
                 else
-                    echo -e "    ${RED}[FAIL] No emulator found. Create one in Android Studio.${NC}"
+                    echo -e "    ${YELLOW}[FIX] Open Simulator app or run: xcrun simctl boot <device_udid>${NC}"
                 fi
-            else
-                echo -e "    ${YELLOW}[FIX] Start emulator from Android Studio or connect device${NC}"
             fi
+        else
+            echo -e "${RED}xcrun not found${NC}"
+            echo -e "    ${YELLOW}[FIX] Install Xcode Command Line Tools: xcode-select --install${NC}"
         fi
     else
-        echo -e "${RED}ADB not found${NC}"
-        echo -e "    ${YELLOW}[FIX] Check ANDROID_HOME environment variable${NC}"
+        # ---- Android Emulator / Device 점검 ----
+        # ANDROID_HOME 미설정 시 기본 경로 탐색 (macOS)
+        if ! command -v adb &> /dev/null; then
+            for SDK_PATH in "$HOME/Library/Android/sdk" "/usr/local/share/android-sdk"; do
+                if [[ -f "$SDK_PATH/platform-tools/adb" ]]; then
+                    export ANDROID_HOME="$SDK_PATH"
+                    export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
+                    break
+                fi
+            done
+        fi
+
+        echo -n "  - Android Device/Emulator:  "
+        if command -v adb &> /dev/null; then
+            # Suppress adb daemon messages
+            adb start-server > /dev/null 2>&1
+            sleep 1
+
+            DEVICE_COUNT=$(adb devices 2>/dev/null | grep -w "device" | wc -l)
+            if [[ $DEVICE_COUNT -gt 0 ]]; then
+                DEVICE_NAME=$(adb devices 2>/dev/null | grep -w "device" | head -1 | cut -f1)
+                echo -e "${GREEN}Connected ($DEVICE_NAME)${NC}"
+                DEVICE_CONNECTED=true
+            else
+                echo -e "${RED}Not Connected${NC}"
+                if [[ "$AUTO_START" == true ]]; then
+                    echo -e "    ${BLUE}[AUTO] Starting Android emulator...${NC}"
+
+                    # Preferred emulator: Pixel_6, otherwise use first available
+                    EMULATOR_NAME=$(emulator -list-avds 2>/dev/null | grep -i "Pixel_6" | head -1)
+                    if [[ -z "$EMULATOR_NAME" ]]; then
+                        EMULATOR_NAME=$(emulator -list-avds 2>/dev/null | head -1)
+                    fi
+
+                    if [[ -n "$EMULATOR_NAME" ]]; then
+                        echo -e "    ${BLUE}[AUTO] Found emulator: $EMULATOR_NAME${NC}"
+                        emulator -avd "$EMULATOR_NAME" -no-snapshot-load > /dev/null 2>&1 &
+                        EMULATOR_PID=$!
+                        echo -e "    ${BLUE}[AUTO] Waiting for emulator to boot (this may take a while)...${NC}"
+
+                        # Wait for emulator to boot (max 120 seconds)
+                        for i in {1..120}; do
+                            sleep 2
+                            BOOT_COMPLETED=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
+                            if [[ "$BOOT_COMPLETED" == "1" ]]; then
+                                DEVICE_NAME=$(adb devices 2>/dev/null | grep -w "device" | head -1 | cut -f1)
+                                echo -e "    ${GREEN}[OK] Emulator started ($DEVICE_NAME)${NC}"
+                                DEVICE_CONNECTED=true
+
+                                # Some environments report boot completed before ADB is fully in 'device' state.
+                                # Wait a bit longer to avoid Appium timing out while searching for a connected device.
+                                echo -e "    ${BLUE}[AUTO] Waiting for ADB to be ready...${NC}"
+                                ADB_READY=false
+                                for j in {1..30}; do
+                                    STATE=$(adb get-state 2>/dev/null | tr -d '\r')
+                                    if [[ "$STATE" == "device" ]]; then
+                                        ADB_READY=true
+                                        break
+                                    fi
+                                    sleep 2
+                                done
+
+                                if [[ "$ADB_READY" == true ]]; then
+                                    echo -e "    ${GREEN}[OK] ADB is ready${NC}"
+                                else
+                                    echo -e "    ${RED}[FAIL] ADB not ready (still offline).${NC}"
+                                    DEVICE_CONNECTED=false
+                                fi
+                                break
+                            fi
+                            # Show progress every 10 seconds
+                            if (( i % 5 == 0 )); then
+                                echo -e "    ${BLUE}[AUTO] Still waiting... (${i}s)${NC}"
+                            fi
+                        done
+
+                        if [[ "$DEVICE_CONNECTED" == false ]]; then
+                            echo -e "    ${RED}[FAIL] Emulator boot timeout${NC}"
+                        fi
+                    else
+                        echo -e "    ${RED}[FAIL] No emulator found. Create one in Android Studio.${NC}"
+                    fi
+                else
+                    echo -e "    ${YELLOW}[FIX] Start emulator from Android Studio or connect device${NC}"
+                fi
+            fi
+        else
+            echo -e "${RED}ADB not found${NC}"
+            echo -e "    ${YELLOW}[FIX] Check ANDROID_HOME environment variable${NC}"
+        fi
     fi
 
     # Check 3: Virtual Environment
@@ -295,10 +415,27 @@ if [[ "$SKIP_CHECK" == false ]]; then
 
     echo ""
 
-    # Check 4: Appium Driver (Android)
-    if [[ "$PLATFORM" == "android" ]]; then
+    # Check 4: Appium Driver (플랫폼별 분기)
+    if [[ "$PLATFORM" == "ios" ]]; then
+        echo -n "  - Appium driver (XCUITest):    "
+        if $APPIUM_CMD driver list --installed 2>&1 | grep -qi "xcuitest"; then
+            echo -e "${GREEN}Installed${NC}"
+        else
+            echo -e "${RED}Not Installed${NC}"
+            if [[ "$AUTO_START" == true ]]; then
+                echo -e "    ${BLUE}[AUTO] Installing XCUITest driver...${NC}"
+                if $APPIUM_CMD driver install xcuitest; then
+                    echo -e "    ${GREEN}[OK] XCUITest driver installed${NC}"
+                else
+                    echo -e "    ${RED}[FAIL] Could not install XCUITest driver${NC}"
+                fi
+            else
+                echo -e "    ${YELLOW}[FIX] Run: appium driver install xcuitest${NC}"
+            fi
+        fi
+    else
         echo -n "  - Appium driver (UiAutomator2): "
-        if $APPIUM_CMD driver list --installed 2>/dev/null | grep -qi "uiautomator2@"; then
+        if $APPIUM_CMD driver list --installed 2>&1 | grep -qi "uiautomator2"; then
             echo -e "${GREEN}Installed${NC}"
         else
             echo -e "${RED}Not Installed${NC}"
@@ -415,7 +552,7 @@ if [[ -n "$APP_PATH" ]]; then
     if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
         APP_PATH=$(cygpath -w "$APP_PATH" 2>/dev/null || echo "$APP_PATH")
     fi
-    CMD="$CMD --app=$APP_PATH"
+    CMD="$CMD --app=\"$APP_PATH\""
 fi
 
 if [[ "$RUN_ALL" == false && -n "$TEST_NAME" ]]; then
@@ -423,6 +560,9 @@ if [[ "$RUN_ALL" == false && -n "$TEST_NAME" ]]; then
 fi
 
 echo "  Platform: $PLATFORM"
+if [[ -n "$ENV_TYPE" ]]; then
+    echo "  Env:      $ENV_TYPE"
+fi
 if [[ -n "$APP_PATH" ]]; then
     echo "  App:      $APP_PATH"
 fi
@@ -437,7 +577,7 @@ echo ""
 echo "----------------------------------------"
 
 # Run tests
-$CMD
+eval $CMD
 TEST_EXIT_CODE=$?
 
 echo "----------------------------------------"

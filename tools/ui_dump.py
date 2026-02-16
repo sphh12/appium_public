@@ -139,7 +139,7 @@ def _finalize_session_dir(session_tmp_dir: str, output_root: str, timestamp_form
         return None
 
     end_timestamp = datetime.now().strftime(timestamp_format)
-    final_dir = _ensure_unique_dir(os.path.join(output_root, end_timestamp))
+    final_dir = _ensure_unique_dir(os.path.join(output_root, f"aos_{end_timestamp}"))
 
     try:
         os.rename(session_tmp_dir, final_dir)
@@ -163,8 +163,10 @@ def dump_ui(name: str = None):
     output_dir = os.path.join(PROJECT_ROOT, "ui_dumps")
     os.makedirs(output_dir, exist_ok=True)
 
-    # 타임스탬프 생성
+    # aos_ 프리픽스 + 타임스탬프 폴더 생성
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    session_dir = os.path.join(output_dir, f"aos_{timestamp}")
+    os.makedirs(session_dir, exist_ok=True)
 
     # 파일명 생성
     if name:
@@ -172,7 +174,7 @@ def dump_ui(name: str = None):
     else:
         filename = f"{timestamp}.xml"
 
-    filepath = os.path.join(output_dir, filename)
+    filepath = os.path.join(session_dir, filename)
 
     print("=" * 50)
     print("  UI 요소 덤프 스크립트")
@@ -313,7 +315,7 @@ def interactive_mode():
 
     # 세션 임시 폴더(종료 시점에 폴더명을 종료시간으로 확정)
     session_start = datetime.now().strftime("%Y%m%d_%H%M%S")
-    session_tmp_dir = os.path.join(output_dir, f"_running_{session_start}")
+    session_tmp_dir = os.path.join(output_dir, f"_aos_running_{session_start}")
     session_tmp_dir = _ensure_unique_dir(session_tmp_dir)
     os.makedirs(session_tmp_dir, exist_ok=True)
 
@@ -506,7 +508,7 @@ def watch_mode(interval: float = 0.2):
 
     # 세션 폴더 생성
     session_start = datetime.now().strftime("%Y%m%d_%H%M%S")
-    session_tmp_dir = os.path.join(output_dir, f"_watch_{session_start}")
+    session_tmp_dir = os.path.join(output_dir, f"_aos_watch_{session_start}")
     session_tmp_dir = _ensure_unique_dir(session_tmp_dir)
     os.makedirs(session_tmp_dir, exist_ok=True)
 
