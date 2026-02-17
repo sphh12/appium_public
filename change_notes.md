@@ -1,5 +1,47 @@
 # Change Notes
 
+## 2026-02-17
+
+### Live 앱 로그인 자동화 완성 (QWERTY 보안 키보드 대응)
+
+- **Live 앱 전용 QWERTY 커스텀 보안 키보드 완전 대응**
+  - `_type_on_live_security_keyboard()`: 영문(소/대문자) + 숫자 + 특수문자 입력 지원
+  - 대문자 키: Shift 후 `"Capital S 니은"` 형식 content-desc 매핑
+  - 특수문자: 한국어 설명 매핑 (`"!" → "느낌표"`, `"@" → "골뱅이"` 등 33개)
+  - 모드 전환: 소문자↔대문자(Shift), 영문↔특수문자 자동 전환
+  - Shift 1회용 동작 지원 (대문자 1글자 입력 후 자동 해제)
+
+- **간편비밀번호(Simple Password) 설정 자동화**
+  - 4자리 PIN 생성 입력 → 재확인 입력 → 성공 팝업 OK 클릭
+  - 랜덤 배치 숫자 키패드 대응 (content-desc 기반)
+  - 연속 숫자 제한 대응: `1234` → `1212`로 변경 ("sequence characters" 에러 방지)
+
+- **잠금화면 자동 처리 (2가지 유형)**
+  - Full Password Lock: `"Enter password to unlock"` + QWERTY 키보드 → 비밀번호 입력으로 해제
+  - Simple Password Lock: `"Login with ID/Password"` 클릭 → YES → 로그인 화면 이동
+  - 권한 동의 화면: `"Agree"` 클릭 (pm clear 후 첫 실행 대응)
+
+- **보안 키보드 진단 스크립트 추가**
+  - `tools/debug_keyboard.py`: 키보드 상태별 UI 덤프 캡처 (소문자/대문자/특수문자)
+  - 키보드 content-desc 형식 확인용 도구
+
+- **로그인 후 팝업 처리 강화**
+  - 간편비밀번호 설정 후에도 보이스피싱 경고 팝업 처리 추가
+  - `_dismiss_success_popup()`: btnOk → "OK" 텍스트 → 아무 Button 순서로 fallback
+
+테스트 흐름 (전체 자동화 성공):
+```
+앱 실행 → 잠금화면 해제 → 간편비밀번호 설정 → Success OK → 보이스피싱 처리 → 홈 화면 도달
+```
+
+변경 파일:
+- [utils/auth.py](utils/auth.py) - QWERTY 키보드, 잠금화면, 간편비밀번호 처리
+- [tools/test_login_live.py](tools/test_login_live.py) - Live 앱 로그인 테스트 스크립트
+- [tools/debug_keyboard.py](tools/debug_keyboard.py) (신규) - 키보드 진단 도구
+- .env / .env.example - SIMPLE_PIN 추가 (1212)
+
+---
+
 ## 2026-02-16 (2차)
 
 ### 앱 화면 자동 탐색 스크립트 (explore_app.py) 신규 생성

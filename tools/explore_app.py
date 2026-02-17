@@ -38,6 +38,7 @@ load_dotenv()
 
 from config.capabilities import ANDROID_CAPS, get_appium_server_url
 from utils.auth import login
+from utils.initial_screens import handle_initial_screens
 
 # Live / Staging 전환 설정
 # USE_LIVE=True → Live 앱, False → Staging 앱
@@ -196,11 +197,11 @@ def dismiss_popup(driver, max_attempts=5, capture_folder=None):
                 continue
 
             # 2. 알려진 닫기 버튼들 (우선순위 순서)
+            # btnCancel 제거: 초기 설정 화면에서 Cancel 누르면 앱 종료됨
             close_ids = [
                 "imgvCross",      # In-App Banner X 버튼
                 "btnTwo",         # In-App Banner "Cancel" 버튼
                 "btn_close",      # 공통 닫기
-                "btnCancel",      # 공통 취소
             ]
             for cid in close_ids:
                 try:
@@ -569,6 +570,171 @@ def ensure_app_running(driver, max_retries=3):
         except Exception as e:
             print(f"  [app] activate_app 실패: {e}")
 
+    return False
+
+
+def _handle_permission_guide(driver):
+    """앱 최초 실행 시 권한 안내 화면 처리.
+
+    'Guide for using the service' 화면에서 [Agree] (btnConfirm) 클릭.
+    Cancel을 누르면 앱이 종료되므로 반드시 Agree를 눌러야 함.
+    이후 Android 시스템 권한 팝업(Allow/Deny)도 처리.
+    """
+    driver.implicitly_wait(0)
+    try:
+        # 권한 안내 화면 확인 (tv_one: "Guide for using the service")
+        try:
+            el = driver.find_element(AppiumBy.ID, _id("btnConfirm"))
+            if el.is_displayed():
+                print("  [initial] 권한 안내 화면 → Agree 클릭")
+                el.click()
+                time.sleep(2)
+
+                # Android 시스템 권한 팝업 처리 (Allow / While using the app)
+                for _ in range(5):
+                    try:
+                        # "While using the app" 또는 "Allow"
+                        allow_btn = driver.find_element(
+                            AppiumBy.ID,
+                            "com.android.permissioncontroller:id/permission_allow_foreground_only_button"
+                        )
+                        allow_btn.click()
+                        print("  [initial] 시스템 권한 → Allow (foreground)")
+                        time.sleep(1)
+                        continue
+                    except (NoSuchElementException, WebDriverException):
+                        pass
+
+                    try:
+                        allow_btn = driver.find_element(
+                            AppiumBy.ID,
+                            "com.android.permissioncontroller:id/permission_allow_button"
+                        )
+                        allow_btn.click()
+                        print("  [initial] 시스템 권한 → Allow")
+                        time.sleep(1)
+                        continue
+                    except (NoSuchElementException, WebDriverException):
+                        pass
+
+                    try:
+                        deny_btn = driver.find_element(
+                            AppiumBy.ID,
+                            "com.android.permissioncontroller:id/permission_deny_button"
+                        )
+                        deny_btn.click()
+                        print("  [initial] 시스템 권한 → Deny (선택 권한)")
+                        time.sleep(1)
+                        continue
+                    except (NoSuchElementException, WebDriverException):
+                        break
+        except (NoSuchElementException, WebDriverException):
+            pass
+    finally:
+        driver.implicitly_wait(2)
+
+
+def _wait_for_home_after_login(driver, folder, timeout=30):
+    """로그인 후 Home 탭이 나타날 때까지 대기하면서 팝업 처리.
+
+    dismiss_all_popups의 back 키가 앱을 종료시킬 수 있으므로,
+    back 키 대신 알려진 팝업 버튼만 클릭하는 안전한 방식으로 처리.
+    """
+    import time as _t
+    start = _t.time()
+    while _t.time() - start < timeout:
+        driver.implicitly_wait(0)
+        try:
+            # Home 탭이 보이면 성공
+            driver.find_element(AppiumBy.XPATH, "//*[@content-desc='Home']")
+            driver.implicitly_wait(2)
+            print("  [post-login] Home 탭 발견 → 로그인 성공")
+            # Home 도달 후 팝업 정리 (이제 back 키 사용 안전)
+            dismiss_all_popups(driver, max_rounds=3)
+            return True
+        except (NoSuchElementException, WebDriverException):
+            pass
+
+        # 알려진 팝업/화면 요소 처리 (back 키 없이)
+        handled = False
+
+        # Renew Auto Debit 팝업
+        try:
+            btn = driver.find_element(AppiumBy.ID, _id("btn_okay"))
+            if btn.is_displayed():
+                if folder:
+                    save_dump(driver, folder, "popup_renew_auto_debit", verify=False)
+                btn.click()
+                print("  [post-login] Renew Auto Debit → btn_okay 클릭")
+                _t.sleep(2)
+                try:
+                    back = driver.find_element(AppiumBy.ID, _id("iv_back"))
+                    back.click()
+                    print("  [post-login] iv_back 복귀")
+                except (NoSuchElementException, WebDriverException):
+                    pass
+                _t.sleep(1.5)
+                handled = True
+        except (NoSuchElementException, WebDriverException):
+            pass
+
+        # In-App Banner
+        for cid in ["imgvCross", "btnTwo", "btn_close"]:
+            try:
+                el = driver.find_element(AppiumBy.ID, _id(cid))
+                if el.is_displayed():
+                    if folder:
+                        save_dump(driver, folder, f"popup_{cid}", verify=False)
+                    el.click()
+                    print(f"  [post-login] 팝업 닫기: {cid}")
+                    _t.sleep(1)
+                    handled = True
+                    break
+            except (NoSuchElementException, WebDriverException):
+                pass
+
+        # 지문 인증 설정 (나중에)
+        try:
+            el = driver.find_element(AppiumBy.ID, _id("txt_pennytest_msg"))
+            if el.is_displayed():
+                el.click()
+                print("  [post-login] 지문 인증 → 나중에")
+                _t.sleep(1)
+                handled = True
+        except (NoSuchElementException, WebDriverException):
+            pass
+
+        # 보이스피싱 경고
+        try:
+            el = driver.find_element(AppiumBy.ID, _id("check_customer"))
+            if el.is_displayed():
+                el.click()
+                _t.sleep(0.5)
+                # 확인 버튼
+                for txt in ["확인", "OK", "Ok"]:
+                    try:
+                        btn = driver.find_element(
+                            AppiumBy.XPATH, f"//android.widget.Button[@text='{txt}']")
+                        btn.click()
+                        break
+                    except (NoSuchElementException, WebDriverException):
+                        pass
+                print("  [post-login] 보이스피싱 경고 처리")
+                _t.sleep(1)
+                handled = True
+        except (NoSuchElementException, WebDriverException):
+            pass
+
+        driver.implicitly_wait(2)
+
+        if not handled:
+            _t.sleep(2)
+            print(f"  [post-login] 대기 중... ({int(_t.time() - start)}초)")
+
+    # 타임아웃 → 디버그 덤프
+    print("  [post-login] Home 탭 미도달 (타임아웃)")
+    if folder:
+        save_dump(driver, folder, "debug_post_login_timeout", verify=False)
     return False
 
 
@@ -1040,26 +1206,57 @@ def main():
             print(f"  [wait] 앱 로딩 중... ({(wait_round + 1) * 2}초)")
 
         if not app_ready:
-            # 마지막으로 앱 재활성화 시도
-            pkg = get_app_package()
-            print(f"[explore] 앱 로딩 실패 → 재활성화 시도 ({pkg})")
+            # 초기 설정 화면 처리 (권한 동의, 언어 선택, 약관 등)
+            print("[explore] 초기 설정 화면 감지 시도...")
+            _handle_permission_guide(driver)
+            time.sleep(2)
+
+            # 언어/약관 등 나머지 초기 화면 처리
+            handle_initial_screens(driver, resource_id_prefix=RID, max_attempts=8)
+            time.sleep(2)
+
+            # 초기 화면 처리 후 다시 Home/Login 확인
             try:
-                driver.activate_app(pkg)
-                time.sleep(5)
-            except Exception:
+                driver.find_element(AppiumBy.XPATH, "//*[@content-desc='Home']")
+                print("[explore] 초기 설정 후 Home 화면 도달")
+                app_ready = True
+            except (NoSuchElementException, WebDriverException):
                 pass
+
+            if not app_ready and check_login_needed(driver):
+                print("[explore] 초기 설정 후 로그인 화면 도달")
+                app_ready = True
+
+            if not app_ready:
+                # 마지막으로 앱 재활성화 시도
+                pkg = get_app_package()
+                print(f"[explore] 앱 로딩 실패 → 재활성화 시도 ({pkg})")
+                try:
+                    driver.activate_app(pkg)
+                    time.sleep(5)
+                except Exception:
+                    pass
 
         # 로그인 필요 여부 확인
         if check_login_needed(driver):
             print(f"[explore] 로그인 필요 - {'Live' if USE_LIVE else 'Staging'} 계정으로 진행")
-            login(driver, username=_LOGIN_USER, pin=_LOGIN_PIN,
-                  resource_id_prefix=RID)
-            print("[explore] 로그인 완료")
+            # 디버그: 로그인 전 화면 캡처
+            save_dump(driver, folder, "debug_before_login", verify=False)
+            try:
+                # set_english=False: handle_initial_screens()에서 이미 English 설정 완료
+                login(driver, username=_LOGIN_USER, pin=_LOGIN_PIN,
+                      resource_id_prefix=RID, set_english=False)
+                print("[explore] 로그인 완료")
+            except Exception as login_err:
+                # 로그인 실패 시 디버그 덤프 저장
+                print(f"[explore] 로그인 실패: {login_err}")
+                save_dump(driver, folder, "debug_login_failed", verify=False)
+                raise
             time.sleep(3)
-            # 로그인 후 팝업 완전 정리 (In-App Banner, Renew Auto Debit 등)
-            print("[explore] 로그인 후 팝업 정리 시작...")
-            dismiss_all_popups(driver, max_rounds=5)
-            time.sleep(1)
+            # 로그인 후: Home 탭이 나타날 때까지 대기하면서 팝업 처리
+            # dismiss_all_popups의 back 키가 앱을 종료시킬 수 있으므로, 먼저 Home 탭 대기
+            print("[explore] 로그인 후 Home 화면 대기...")
+            _wait_for_home_after_login(driver, folder, timeout=30)
         else:
             print("[explore] 이미 로그인된 상태 - 팝업 정리")
             dismiss_all_popups(driver, max_rounds=3)

@@ -49,6 +49,137 @@
 
 ---
 
+## 프로젝트 사전 지식
+
+### 프로젝트 구조
+
+```
+appium/
+├── config/
+│   └── capabilities.py          # ANDROID_CAPS, IOS_CAPS, get_appium_server_url()
+├── utils/
+│   ├── auth.py                  # 로그인 모듈 (login, enter_pin_via_security_keyboard)
+│   ├── initial_screens.py       # 초기 화면 처리 (언어 선택, 약관 동의)
+│   ├── language.py              # 앱 언어 설정 (ensure_english_language)
+│   └── helpers.py               # 유틸리티 (scroll_to_element, save_screenshot 등)
+├── tools/
+│   ├── ui_dump.py               # Android UI 덤프 도구 (단일/인터랙티브/Watch 모드)
+│   ├── ui_dump_ios.py           # iOS UI 덤프 도구 (동일 옵션 지원)
+│   ├── explore_app.py           # 앱 화면 자동 탐색 스크립트
+│   ├── run_allure.py            # Allure 리포트 생성/관리
+│   ├── export_summary.py        # Allure 경량 HTML 요약 Export
+│   ├── update_dashboard.py      # Allure 대시보드 업데이트
+│   └── serve.py                 # 로컬 HTTP 서버 (대시보드 열람용)
+├── tests/
+│   ├── android/                 # Android 테스트 (gme1_test.py, test_01.py, xml_test.py 등)
+│   └── ios/                     # iOS 테스트 (ios_contacts_test.py, test_ios_first.py 등)
+├── conftest.py                  # pytest fixture (android_driver, ios_driver, android_driver_logged_in)
+├── apk/                         # APK 파일 보관 (Staging, Live)
+├── ui_dumps/                    # UI 덤프 XML 저장소
+├── allure-results/              # Allure 테스트 결과 (타임스탬프 폴더)
+├── allure-reports/              # Allure HTML 리포트 (LATEST/, dashboard/)
+├── shell/                       # 실행 스크립트 (run-stg.sh, bootstrap.ps1 등)
+├── .env                         # 환경변수 (Git 미추적)
+└── .env.example                 # 환경변수 템플릿
+```
+
+### 대상 앱 정보
+
+| 항목 | Staging | Live |
+|------|---------|------|
+| 패키지 | `com.gmeremit.online.gmeremittance_native.stag` | `com.gmeremit.online.gmeremittance_native` |
+| Resource ID 접두사 | `com.gmeremit.online.gmeremittance_native.stag:id` | `com.gmeremit.online.gmeremittance_native:id` |
+| APK | `apk/Stg_GME_7.13.0.apk` | `apk/GME_v7.14.0_03_02_2026 09_35-live-release.apk` |
+| 계정 환경변수 | `STG_ID` / `STG_PW` | `LIVE_ID` / `LIVE_PW` |
+| Activity | `.splash_screen.view.SplashScreen` | `.splash_screen.view.SplashScreen` |
+| 보안 키보드 | ACCESSIBILITY_ID로 숫자 개별 클릭 | send_keys 방식 (에뮬레이터 제한 있음) |
+
+### 이미 구현된 주요 도구
+
+#### 1. UI Dump 도구 (`tools/ui_dump.py`, `tools/ui_dump_ios.py`)
+- **사용법**: `python tools/ui_dump.py [옵션]`
+- **모드**:
+  - 단일 캡처: `python tools/ui_dump.py [이름]`
+  - 인터랙티브: `python tools/ui_dump.py -i` (Enter로 캡처, q로 종료)
+  - **Watch 모드 (권장)**: `python tools/ui_dump.py -w` (화면 변화 자동 감지, 0.2초 간격)
+  - 기존 파일 마스킹: `python tools/ui_dump.py --mask-existing`
+- **저장 위치**: `ui_dumps/` (플랫폼별 aos_/ios_ 프리픽스)
+- **민감정보 자동 마스킹**: 전화번호, 이메일, 생년월일 자동 마스킹 적용
+- **가이드 문서**: `docs/UI_DUMP_GUIDE.md`
+
+#### 2. 로그인 모듈 (`utils/auth.py`)
+- `login(driver, username, pin, resource_id_prefix, set_english, ...)` - 전체 로그인 플로우
+- `navigate_to_login_screen()` - 메인 화면에서 로그인 화면 진입
+- `enter_pin_via_security_keyboard()` - 보안 키보드 PIN 입력 (Staging/Live 자동 감지)
+- `_handle_post_login_popups()` - 로그인 후 팝업 처리 (지문 인증, 보이스피싱)
+
+#### 3. 초기 화면 처리 (`utils/initial_screens.py`)
+- `handle_initial_screens(driver)` - 언어 선택 + 약관 동의 자동 처리
+- `is_main_screen()` - btn_lgn 존재 여부로 메인 화면 판별
+- `handle_language_selection()` - English 자동 선택
+- `handle_terms_and_conditions()` - 전체 동의 + 스크롤 + Next 버튼
+
+#### 4. 언어 설정 모듈 (`utils/language.py`)
+- `ensure_english_language(driver)` - 메인 화면에서 English 설정
+- `set_language(driver, "한국어")` - 지정 언어로 변경
+- 메인 화면의 `selectedLanguageText` 버튼 → `languageRv` 목록에서 선택
+
+#### 5. 앱 탐색 스크립트 (`tools/explore_app.py`)
+- 앱 전체 화면을 자동 탐색하여 UI 덤프 수집
+- 로그인 → 홈 → 탭/메뉴/서브화면 순차 탐색
+- 팝업 자동 처리 (In-App Banner, Renew Auto Debit 등)
+- 결과: `ui_dumps/explore_*` 폴더에 XML + 스크린샷
+
+#### 6. pytest Fixture (`conftest.py`)
+- `android_driver` - Android 드라이버 (초기 화면 자동 처리 포함)
+- `ios_driver` - iOS 드라이버
+- `android_driver_logged_in` - 로그인 완료 상태 드라이버
+- `@pytest.mark.skip_initial_screens` - 초기 화면 처리 건너뛰기
+- `--record-video` - 테스트 화면 녹화 (실패 시 Allure 첨부)
+- `--allure-attach=hybrid|all` - Allure 첨부 정책
+
+#### 7. Allure 리포트 (`tools/run_allure.py`)
+- 테스트 결과 자동 수집 → HTML 리포트 생성
+- `allure-results/YYYYMMDD_HHMMSS/` - 타임스탬프별 결과 보관
+- `allure-reports/LATEST/` - 최신 리포트 고정 경로
+- `allure-reports/dashboard/` - 전체 실행 이력 대시보드
+- 실패 시 자동 첨부: 스크린샷, page_source.xml, capabilities.json, logcat.txt
+- **가이드 문서**: `docs/ALLURE_REPORT_GUIDE.md`
+
+### 기존 가이드 문서 목록 (`docs/`)
+
+| 문서 | 내용 |
+|------|------|
+| `UI_DUMP_GUIDE.md` | UI Dump 도구 전체 사용법, XML 분석법, Locator 전략 |
+| `CODING_GUIDELINES.md` | 테스트 스크립트 작성 규칙 (파일명, Locator 우선순위, Allure 어노테이션) |
+| `APP_STRUCTURE.md` | GME 앱 기능 구조 리스트 (화면별 요소 정보, resource-id 정리) |
+| `ALLURE_REPORT_GUIDE.md` | Allure 리포트 탭별 설명, 30초 분석 루틴, 진단 파일 활용법 |
+| `IOS_SETUP_GUIDE.md` | iOS 자동화 환경 세팅 (Xcode, XCUITest 드라이버, 시뮬레이터) |
+| `IOS_TEST_GUIDE.md` | iOS UI Dump 기반 테스트 작성 가이드 (시행착오 & 해결 방법 포함) |
+| `MAC_SETUP_GUIDE.md` | macOS Appium 환경 세팅 (Homebrew, Node.js, Android Studio) |
+| `README_CLONE.md` | 클론 후 초기 환경 구성 (bootstrap 스크립트, 필수 체크리스트) |
+
+### 환경변수 (.env)
+
+| 변수 | 설명 | 필수 여부 |
+|------|------|-----------|
+| `STG_ID` / `STG_PW` | Staging 테스트 계정 | Staging 테스트 시 필수 |
+| `LIVE_ID` / `LIVE_PW` | Live 테스트 계정 | Live 테스트 시 필수 |
+| `STG_APK` / `LIVE_APK` | APK 파일명 | 앱 설치 시 필수 |
+| `GME_RESOURCE_ID_PREFIX` | resource-id 접두사 | 선택 (기본: Staging 패키지) |
+| `APPIUM_HOST` / `APPIUM_PORT` | Appium 서버 주소 | 선택 (기본: 127.0.0.1:4723) |
+| `ANDROID_UDID` | 실물 디바이스 시리얼 | 실기기 테스트 시 필수 |
+
+### 코드 작성 전 반드시 확인
+
+1. **기존 도구가 있는지 확인** - 새로 만들기 전에 `tools/`, `utils/` 폴더의 기존 코드를 먼저 확인
+2. **최신 UI Dump 참조** - `ui_dumps/` 폴더에서 최신 XML 파일 분석 후 코드 작성
+3. **Locator 우선순위** - ACCESSIBILITY_ID > Resource ID > XPath
+4. **앱 빌드 구분** - Staging과 Live의 패키지명/resource-id가 다름, `resource_id_prefix` 파라미터로 구분
+5. **가이드 문서 참조** - `docs/` 폴더의 해당 가이드를 먼저 읽고 기존 패턴을 따름
+
+---
+
 ## 작업 완료 후 규칙
 
 일련의 작업이 완료되면 해당 작업 내용을 정리해서 `change_notes.md` 파일에 작성한다.

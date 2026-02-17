@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(~/Library/Android/sdk/platform-tools/adb wait-for-device)",
+      "Bash(~/Library/Android/sdk/platform-tools/adb shell:*)"
+    ]
+  }
+}
