@@ -108,6 +108,34 @@ def _mask_sensitive_data(xml_content: str) -> str:
     return masked
 
 
+def _get_activity_comment(driver) -> str:
+    """현재 Activity와 Package 정보를 XML 주석 문자열로 반환합니다."""
+    try:
+        activity = driver.current_activity or "unknown"
+        package = driver.current_package or "unknown"
+        return f"<!-- Activity: {activity} | Package: {package} -->\n"
+    except Exception:
+        return ""
+
+
+def _prepend_activity_comment(xml_content: str, driver) -> str:
+    """XML 내용 상단에 Activity 주석을 삽입합니다.
+
+    XML 선언(<?xml ...?>) 바로 다음 줄에 삽입되며,
+    선언이 없으면 맨 앞에 추가합니다.
+    """
+    comment = _get_activity_comment(driver)
+    if not comment:
+        return xml_content
+
+    # XML 선언 뒤에 삽입
+    if xml_content.startswith("<?xml"):
+        decl_end = xml_content.index("?>") + 2
+        return xml_content[:decl_end] + "\n" + comment + xml_content[decl_end:].lstrip("\n")
+    else:
+        return comment + xml_content
+
+
 def _save_xml_with_masking(filepath: str, content: str) -> None:
     """XML 파일을 마스킹하여 저장합니다."""
     masked_content = _mask_sensitive_data(content)
@@ -209,6 +237,8 @@ def dump_ui(name: str = None):
     try:
         print(f"[2/3] 화면 요소 추출 중...")
         page_source = driver.page_source
+        # Activity 정보를 XML 주석으로 삽입
+        page_source = _prepend_activity_comment(page_source, driver)
 
         print(f"[3/3] XML 파일 저장 중 (마스킹 적용)... ({filepath})")
         _save_xml_with_masking(filepath, page_source)
@@ -340,12 +370,15 @@ def interactive_mode():
 
             try:
                 page_source = driver.page_source
+                # Activity 정보를 XML 주석으로 삽입
+                page_source = _prepend_activity_comment(page_source, driver)
 
                 # 마스킹 적용하여 저장
                 _save_xml_with_masking(filepath, page_source)
 
-                # 요소 통계
-                root = ET.fromstring(page_source)
+                # 요소 통계 (Activity 주석 제거 후 파싱)
+                raw_xml = driver.page_source
+                root = ET.fromstring(raw_xml)
                 element_count = len(list(root.iter()))
                 clickable_count = len([e for e in root.iter() if e.get("clickable") == "true"])
 
@@ -544,8 +577,9 @@ def watch_mode(interval: float = 0.2):
                         filename = f"{capture_count:03d}_{screen_name}.xml"
                         filepath = os.path.join(session_tmp_dir, filename)
 
-                        # 마스킹 적용하여 저장
-                        _save_xml_with_masking(filepath, page_source)
+                        # Activity 정보를 XML 주석으로 삽입 + 마스킹 적용하여 저장
+                        save_content = _prepend_activity_comment(page_source, driver)
+                        _save_xml_with_masking(filepath, save_content)
 
                         # 요소 통계
                         root = ET.fromstring(page_source)

@@ -28,6 +28,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from dotenv import load_dotenv
 
 from utils.auth import login
+from utils.helpers import save_error_snapshot
 
 load_dotenv()
 
@@ -159,11 +160,10 @@ def main():
 
     except Exception as e:
         print(f"\n[ERROR] 테스트 실패: {e}")
-        # 실패 시 스크린샷 저장
+        # 실패 시 진단 파일 일괄 저장 (스크린샷 + XML + logcat)
         try:
-            screenshot_path = "/Users/sph/appium/ui_dumps/login_fail_screenshot.png"
-            driver.save_screenshot(screenshot_path)
-            print(f"[DEBUG] 스크린샷 저장: {screenshot_path}")
+            error_dir = "/Users/sph/appium/ui_dumps"
+            save_error_snapshot(driver, error_dir, "error_login_test")
         except Exception:
             pass
         raise

@@ -1,5 +1,38 @@
 # Change Notes
 
+## 2026-02-19
+
+### explore_app.py 인터랙티브 요소 검증 시스템 추가
+
+- **`_log_interactive_elements(sources, base_name)`**: XML page_source를 ElementTree로 파싱하여 인터랙티브 요소를 5가지 타입(버튼/아이콘버튼/토글/ViewPager/스크롤영역)으로 자동 분류·리포트
+- **`_capture_viewpager_pages(driver, folder, base_name)`**: ViewPager 자동 감지 → dotsIndicator로 페이지 수 파악 → 가로 스와이프 캡처 → 원위치 복귀
+- **`scroll_and_capture` 통합**: 스크롤 중 `captured_sources` 수집 → 완료 후 검증 리포트 + ViewPager 자동 캡처
+
+### explore_app.py Card 3rd depth 자동 캡처 (explore_card_3rd_depth)
+
+- **Card Features 서브화면 12개 대상** 자동 탐색 구현
+  - c1~c8: 클릭 → 화면 변화 감지 → 캡처 → 복귀
+  - c9 (upArrow): UI 확장 → 캡처 → 접기
+  - c10 (ViewPager): 스와이프 → 2페이지 캡처 → + 버튼 탐색
+  - c11~c12: UiScrollable + 수동 스크롤 + 텍스트 검색 3단계 탐색
+- **화면 변화 감지 로직**: `_has_screen_changed()` 추가 - 클릭 전/후 텍스트 비교로 실제 화면 이동 여부 판별
+- **팝업/바텀시트 분리 캡처**: `is_popup` 플래그로 `verify=False` 적용 → 팝업이 닫히지 않고 그대로 캡처
+- **캡처 결과**: 8개 서브화면 캡처 성공 (c1, c4~c10)
+  - c2/c3: Card 화면에 해당 ID 없음 (Home 전용)
+  - c11/c12: 현재 앱 상태에서 DOM에 요소 없음
+
+### explore_app.py 실행 옵션 추가
+
+- 커맨드라인 인자로 특정 섹션만 실행 가능
+  - `python tools/explore_app.py card_3rd` → Card 3rd depth만 실행
+  - `python tools/explore_app.py` → 전체 탐색 (기존과 동일)
+  - 사용 가능: `home`, `hamburger`, `history`, `card`, `card_3rd`, `event`, `profile`
+
+변경 파일:
+- [tools/explore_app.py](tools/explore_app.py)
+
+---
+
 ## 2026-02-17
 
 ### Live 앱 로그인 자동화 완성 (QWERTY 보안 키보드 대응)

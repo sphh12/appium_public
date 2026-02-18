@@ -16,6 +16,7 @@ import os
 import sys
 import time
 import re
+import xml.etree.ElementTree as ET
 from datetime import datetime
 
 from appium import webdriver
@@ -37,8 +38,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from config.capabilities import ANDROID_CAPS, get_appium_server_url
-from utils.auth import login
+from utils.auth import login, _handle_simple_password_screen
 from utils.initial_screens import handle_initial_screens
+from utils.helpers import save_error_logcat
 
 # Live / Staging 전환 설정
 # USE_LIVE=True → Live 앱, False → Staging 앱
@@ -58,6 +60,9 @@ else:
     _LOGIN_PIN = os.getenv("STG_PW", "")
     print(f"[config] Staging 앱 모드 (패키지: {RID.split(':')[0]})")
 
+# 간편비밀번호 (Simple Password)
+_SIMPLE_PIN = os.getenv("SIMPLE_PIN", "1234")
+
 # 캡처 파일 번호 카운터
 _file_counter = 0
 
@@ -68,6 +73,39 @@ _popup_capture_folder = None
 def _id(suffix):
     """리소스 ID 전체 경로 생성"""
     return f"{RID}/{suffix}"
+
+
+def _enter_simple_pin(driver, pin=None):
+    """Simple Password 잠금화면에서 PIN을 직접 입력합니다.
+
+    숫자 키패드는 매번 랜덤 배치 → content-desc로 각 숫자를 찾아 클릭.
+    우회(Login with ID/Password)가 아닌 직접 입력 방식.
+
+    Args:
+        pin: 4자리 PIN 문자열 (기본: _SIMPLE_PIN 환경변수)
+
+    Returns:
+        bool: PIN 입력 성공 여부
+    """
+    if pin is None:
+        pin = _SIMPLE_PIN
+    driver.implicitly_wait(0)
+    try:
+        for digit in pin:
+            try:
+                key = driver.find_element(
+                    AppiumBy.XPATH,
+                    f"//android.widget.ImageView[@content-desc='{digit}']"
+                )
+                key.click()
+                time.sleep(0.3)
+            except NoSuchElementException:
+                print(f"  [pin] 숫자 '{digit}' 키 없음")
+                return False
+        print(f"  [pin] Simple PIN 입력 완료 ({len(pin)}자리)")
+        return True
+    finally:
+        driver.implicitly_wait(2)
 
 
 def next_idx():
@@ -133,6 +171,20 @@ def save_dump(driver, folder, name, verify=True):
 
     try:
         xml = driver.page_source
+
+        # Activity 정보를 XML 주석으로 삽입
+        try:
+            activity = driver.current_activity or "unknown"
+            package = driver.current_package or "unknown"
+            comment = f"<!-- Activity: {activity} | Package: {package} -->\n"
+            if xml.startswith("<?xml"):
+                decl_end = xml.index("?>") + 2
+                xml = xml[:decl_end] + "\n" + comment + xml[decl_end:].lstrip("\n")
+            else:
+                xml = comment + xml
+        except Exception:
+            pass
+
         filename = f"{idx:03d}_{name}.xml"
         filepath = os.path.join(folder, filename)
         with open(filepath, "w", encoding="utf-8") as f:
@@ -202,6 +254,7 @@ def dismiss_popup(driver, max_attempts=5, capture_folder=None):
                 "imgvCross",      # In-App Banner X 버튼
                 "btnTwo",         # In-App Banner "Cancel" 버튼
                 "btn_close",      # 공통 닫기
+                "btn_diaog_ok",   # Connection Failed 등 에러 팝업 OK 버튼 (resource-id 오타 그대로)
             ]
             for cid in close_ids:
                 try:
@@ -693,6 +746,17 @@ def _wait_for_home_after_login(driver, folder, timeout=30):
             except (NoSuchElementException, WebDriverException):
                 pass
 
+        # Connection Failed 등 에러 팝업
+        try:
+            el = driver.find_element(AppiumBy.ID, _id("btn_diaog_ok"))
+            if el.is_displayed():
+                el.click()
+                print("  [post-login] 에러 팝업 → OK 클릭")
+                _t.sleep(1)
+                handled = True
+        except (NoSuchElementException, WebDriverException):
+            pass
+
         # 지문 인증 설정 (나중에)
         try:
             el = driver.find_element(AppiumBy.ID, _id("txt_pennytest_msg"))
@@ -731,10 +795,11 @@ def _wait_for_home_after_login(driver, folder, timeout=30):
             _t.sleep(2)
             print(f"  [post-login] 대기 중... ({int(_t.time() - start)}초)")
 
-    # 타임아웃 → 디버그 덤프
+    # 타임아웃 → 디버그 덤프 + logcat
     print("  [post-login] Home 탭 미도달 (타임아웃)")
     if folder:
         save_dump(driver, folder, "debug_post_login_timeout", verify=False)
+        save_error_logcat(driver, folder, "error_post_login_timeout")
     return False
 
 
@@ -778,6 +843,277 @@ def scroll_up(driver, times=1):
         time.sleep(1)
 
 
+def _extract_visible_texts(page_source):
+    """XML page_source에서 표시된 텍스트 값들을 추출 (빈 값 제외).
+
+    스크롤 전/후 화면 비교에 사용.
+    text 속성뿐 아니라 content-desc도 포함하여 이미지 버튼도 감지.
+    """
+    texts = set(t for t in re.findall(r'text="([^"]*)"', page_source) if t.strip())
+    descs = set(d for d in re.findall(r'content-desc="([^"]*)"', page_source) if d.strip())
+    return texts | descs
+
+
+def _log_interactive_elements(sources, base_name):
+    """캡처된 page_source(XML) 목록에서 모든 인터랙티브 요소를 분류·출력.
+
+    스크롤 전/후 캡처한 XML을 합쳐서 분석하므로,
+    화면 전체(위~아래)의 모든 클릭/토글/스와이프 가능 요소를 확인할 수 있음.
+
+    분류 기준:
+    - nav_buttons: clickable + text 있음 (화면 이동 버튼)
+    - icon_buttons: clickable + text 없음 (아이콘 버튼, ImageView 등)
+    - toggles: checkable 또는 Switch/ToggleButton 클래스
+    - viewpagers: ViewPager/RecyclerView with scrollable + horizontal-scroll
+    - scrollable: scrollable="true" (스크롤 가능 영역)
+
+    Args:
+        sources: page_source(XML 문자열) 리스트
+        base_name: 화면 식별용 이름 (로그 출력용)
+    """
+    # 하단 네비게이션/시스템 UI 요소 제외 목록
+    SKIP_IDS = {
+        "navigation_home", "navigation_history", "navigation_card",
+        "navigation_event", "navigation_profile",
+        "statusBarBackground", "navigationBarBackground",
+        "action_bar_root", "content",
+    }
+    # 결과 저장: resource-id 기준으로 중복 제거
+    nav_buttons = {}      # resource-id → (text, content-desc, class)
+    icon_buttons = {}
+    toggles = {}
+    viewpagers = {}
+    scrollables = {}
+
+    for source in sources:
+        try:
+            root = ET.fromstring(source)
+        except ET.ParseError:
+            continue
+
+        for elem in root.iter():
+            rid = elem.get("resource-id", "")
+            # 패키지명 접두사 제거 (예: com.gmeremit.online:id/btn_ok → btn_ok)
+            short_id = rid.split("/")[-1] if "/" in rid else rid
+            if short_id in SKIP_IDS or not short_id:
+                continue
+
+            cls = elem.get("class", "")
+            text = elem.get("text", "").strip()
+            desc = elem.get("content-desc", "").strip()
+            clickable = elem.get("clickable") == "true"
+            checkable = elem.get("checkable") == "true"
+            scrollable = elem.get("scrollable") == "true"
+            display = text or desc or short_id
+
+            # 토글/스위치 분류
+            if checkable or cls in ("android.widget.Switch", "android.widget.ToggleButton"):
+                toggles[short_id] = (display, cls)
+            # ViewPager 분류
+            elif "ViewPager" in cls:
+                viewpagers[short_id] = (display, cls)
+            # 스크롤 가능 영역
+            elif scrollable:
+                scrollables[short_id] = (display, cls)
+            # 클릭 가능 요소 분류
+            elif clickable:
+                if text or desc:
+                    nav_buttons[short_id] = (display, cls)
+                else:
+                    icon_buttons[short_id] = (short_id, cls)
+
+    # 리포트 출력
+    total = len(nav_buttons) + len(icon_buttons) + len(toggles) + len(viewpagers)
+    print(f"\n  [검증] {base_name}: 인터랙티브 요소 총 {total}개 발견")
+    if nav_buttons:
+        print(f"    ▸ 버튼 ({len(nav_buttons)}개): {', '.join(nav_buttons.keys())}")
+    if icon_buttons:
+        print(f"    ▸ 아이콘 버튼 ({len(icon_buttons)}개): {', '.join(icon_buttons.keys())}")
+    if toggles:
+        print(f"    ▸ 토글/스위치 ({len(toggles)}개): {', '.join(toggles.keys())}")
+    if viewpagers:
+        print(f"    ▸ ViewPager ({len(viewpagers)}개): {', '.join(viewpagers.keys())}")
+    if scrollables:
+        print(f"    ▸ 스크롤 영역 ({len(scrollables)}개): {', '.join(scrollables.keys())}")
+
+    return {
+        "nav_buttons": nav_buttons,
+        "icon_buttons": icon_buttons,
+        "toggles": toggles,
+        "viewpagers": viewpagers,
+        "scrollables": scrollables,
+    }
+
+
+def _capture_viewpager_pages(driver, folder, base_name):
+    """ViewPager를 감지하고, 가로 스와이프하여 각 페이지를 캡처.
+
+    동작 원리:
+    1. page_source에서 ViewPager 요소 검색
+    2. dotsIndicator (페이지 인디케이터)로 페이지 수 파악
+    3. 현재 페이지 이후의 페이지를 스와이프하며 캡처
+    4. 캡처 완료 후 원래 페이지로 복귀
+
+    Args:
+        driver: Appium 드라이버
+        folder: 저장 폴더
+        base_name: 파일명 기본 접두사
+
+    Returns:
+        list: 저장된 파일 경로 목록
+    """
+    saved_files = []
+    try:
+        source = driver.page_source
+        root = ET.fromstring(source)
+    except Exception:
+        return saved_files
+
+    # ViewPager 요소 찾기
+    viewpager = None
+    for elem in root.iter():
+        cls = elem.get("class", "")
+        if "ViewPager" in cls:
+            viewpager = elem
+            break
+
+    if viewpager is None:
+        return saved_files
+
+    # ViewPager 영역 좌표 추출
+    bounds_str = viewpager.get("bounds", "")
+    if not bounds_str:
+        return saved_files
+
+    # bounds 파싱: "[x1,y1][x2,y2]"
+    coords = re.findall(r'\[(\d+),(\d+)\]', bounds_str)
+    if len(coords) < 2:
+        return saved_files
+    x1, y1 = int(coords[0][0]), int(coords[0][1])
+    x2, y2 = int(coords[1][0]), int(coords[1][1])
+
+    # dotsIndicator로 페이지 수 파악
+    page_count = 0
+    for elem in root.iter():
+        rid = elem.get("resource-id", "")
+        if "dotsIndicator" in rid or "dots_indicator" in rid or "page_indicator" in rid:
+            # 인디케이터의 자식 수 = 페이지 수
+            page_count = len(list(elem))
+            break
+
+    if page_count <= 1:
+        # 인디케이터를 못 찾으면 2페이지로 가정하고 1회 스와이프 시도
+        page_count = 2
+
+    vp_rid = viewpager.get("resource-id", "ViewPager")
+    short_id = vp_rid.split("/")[-1] if "/" in vp_rid else vp_rid
+    print(f"  [ViewPager] {base_name}: '{short_id}' 감지 - {page_count}페이지")
+
+    # 스와이프 좌표 계산 (ViewPager 영역 내에서 가로 스와이프)
+    center_y = (y1 + y2) // 2
+    swipe_start_x = x1 + int((x2 - x1) * 0.8)   # 오른쪽에서
+    swipe_end_x = x1 + int((x2 - x1) * 0.2)      # 왼쪽으로
+
+    # 현재 첫 페이지는 이미 캡처됨 → 2번째 페이지부터 캡처
+    swipe_count = 0
+    for page_num in range(2, page_count + 1):
+        driver.swipe(swipe_start_x, center_y, swipe_end_x, center_y, 600)
+        swipe_count += 1
+        time.sleep(1)
+
+        page_suffix = f"vp_page{page_num}"
+        print(f"  [ViewPager] {base_name}: 페이지 {page_num}/{page_count} 캡처")
+        filepath = save_dump(driver, folder, f"{base_name}_{page_suffix}", verify=False)
+        if filepath:
+            saved_files.append(filepath)
+
+    # 원래 페이지로 복귀 (역방향 스와이프)
+    for _ in range(swipe_count):
+        driver.swipe(swipe_end_x, center_y, swipe_start_x, center_y, 600)
+        time.sleep(0.5)
+
+    return saved_files
+
+
+def scroll_and_capture(driver, folder, base_name, max_scrolls=5, verify=True):
+    """화면을 스크롤하면서 각 위치의 UI 덤프를 캡처.
+
+    동작 원리:
+    1. 초기 화면 캡처 (base_name)
+    2. 스크롤 다운 후 화면 텍스트 비교
+    3. 새로운 콘텐츠가 발견되면 캡처 (base_name_scrolled, base_name_scrolled_2, ...)
+    4. 새 콘텐츠 없으면 중지 (하단 도달)
+    5. 스크롤한 만큼 다시 올려서 원위치 복귀
+
+    Args:
+        driver: Appium 드라이버
+        folder: 저장 폴더
+        base_name: 파일명 기본 접두사 (예: "card_main", "menu_Settings")
+        max_scrolls: 최대 스크롤 횟수 (기본 5)
+        verify: save_dump 시 팝업/시스템UI 검증 여부 (기본 True)
+
+    Returns:
+        list: 저장된 파일 경로 목록
+    """
+    saved_files = []
+    all_seen_texts = set()
+    captured_sources = []  # 검증용: 각 스크롤 위치의 page_source 수집
+    scroll_count = 0
+
+    # 1. 초기 화면 캡처
+    filepath = save_dump(driver, folder, base_name, verify=verify)
+    if filepath:
+        saved_files.append(filepath)
+
+    try:
+        initial_source = driver.page_source
+        all_seen_texts = _extract_visible_texts(initial_source)
+        captured_sources.append(initial_source)
+    except Exception:
+        return saved_files
+
+    # 2. 스크롤하면서 캡처
+    for scroll_num in range(1, max_scrolls + 1):
+        scroll_down(driver)
+        scroll_count += 1
+        time.sleep(0.5)
+
+        try:
+            current_source = driver.page_source
+        except Exception:
+            break
+
+        current_texts = _extract_visible_texts(current_source)
+        new_texts = current_texts - all_seen_texts
+
+        if not new_texts:
+            print(f"  [scroll] {base_name}: 스크롤 {scroll_num}회 - 새 콘텐츠 없음 → 중지")
+            break
+
+        # 파일명: base_name_scrolled (1회차), base_name_scrolled_2 (2회차), ...
+        suffix = "scrolled" if scroll_num == 1 else f"scrolled_{scroll_num}"
+        print(f"  [scroll] {base_name}: 스크롤 {scroll_num}회 - 신규 텍스트 {len(new_texts)}개")
+        filepath = save_dump(driver, folder, f"{base_name}_{suffix}", verify=verify)
+        if filepath:
+            saved_files.append(filepath)
+        all_seen_texts |= current_texts
+        captured_sources.append(current_source)
+
+    # 3. 원위치 복귀 (스크롤한 만큼 올리기)
+    if scroll_count > 0:
+        scroll_up(driver, times=scroll_count)
+
+    # 4. 인터랙티브 요소 검증 리포트 출력
+    if captured_sources:
+        _log_interactive_elements(captured_sources, base_name)
+
+    # 5. ViewPager 감지 시 가로 스와이프 캡처
+    vp_files = _capture_viewpager_pages(driver, folder, base_name)
+    saved_files.extend(vp_files)
+
+    return saved_files
+
+
 # =========================================================================
 # 각 탭 탐색 함수
 # =========================================================================
@@ -787,12 +1123,7 @@ def explore_home(driver, folder):
     print("\n===== [HOME] 탭 탐색 =====")
     click_tab(driver, "Home")
     ensure_clean_screen(driver)
-    save_dump(driver, folder, "home_main")
-
-    # 스크롤해서 하단 영역도 캡처
-    scroll_down(driver)
-    save_dump(driver, folder, "home_scrolled")
-    scroll_up(driver)
+    scroll_and_capture(driver, folder, "home_main")
 
     # 알림 화면은 생략 (이전 캡처에서 확인 완료, Appium 불안정 유발)
 
@@ -808,12 +1139,8 @@ def explore_hamburger(driver, folder):
         nav.click()
         print("  [click] 햄버거 메뉴 열기")
         time.sleep(2)
-        save_dump(driver, folder, "hamburger_menu", verify=False)
-
-        # 드로어 스크롤해서 더 보기
-        scroll_down(driver)
-        save_dump(driver, folder, "hamburger_menu_scrolled", verify=False)
-        scroll_up(driver)
+        # 드로어도 스크롤하며 캡처 (verify=False: 드로어는 오버레이)
+        scroll_and_capture(driver, folder, "hamburger_menu", verify=False)
 
         # 메뉴 항목: resource ID 기반으로 직접 클릭 (텍스트 기반보다 안정적)
         # APP_STRUCTURE.md에서 확인된 메뉴 항목
@@ -850,9 +1177,10 @@ def explore_hamburger(driver, folder):
                 dismiss_all_popups(driver, max_rounds=2)
                 ensure_clean_screen(driver)
 
-                save_dump(driver, folder, f"menu_{name}")
+                # 메뉴 화면 + 스크롤 캡처
+                scroll_and_capture(driver, folder, f"menu_{name}")
 
-                # 서브 탭이 있으면 캡처
+                # 서브 탭이 있으면 캡처 (각 탭에서도 스크롤)
                 _capture_sub_tabs(driver, folder, f"menu_{name}")
 
             except NoSuchElementException:
@@ -938,7 +1266,7 @@ def _open_drawer(driver):
 
 
 def _capture_sub_tabs(driver, folder, prefix):
-    """현재 화면의 서브 탭을 캡처"""
+    """현재 화면의 서브 탭을 캡처 (각 탭에서 스크롤 캡처 수행)"""
     try:
         # HorizontalScrollView 내 탭
         tabs = driver.find_elements(
@@ -953,7 +1281,8 @@ def _capture_sub_tabs(driver, folder, prefix):
                         tab.click()
                         time.sleep(1.5)
                         safe = re.sub(r'[^\w]', '_', text).strip('_')
-                        save_dump(driver, folder, f"{prefix}_{safe}")
+                        # 각 탭에서 스크롤하며 캡처
+                        scroll_and_capture(driver, folder, f"{prefix}_{safe}")
                 except Exception:
                     pass
     except Exception:
@@ -973,7 +1302,8 @@ def _capture_sub_tabs(driver, folder, prefix):
                         tab.click()
                         time.sleep(1.5)
                         safe = re.sub(r'[^\w]', '_', text).strip('_')
-                        save_dump(driver, folder, f"{prefix}_{safe}")
+                        # 각 탭에서 스크롤하며 캡처
+                        scroll_and_capture(driver, folder, f"{prefix}_{safe}")
                 except Exception:
                     pass
     except Exception:
@@ -1061,15 +1391,396 @@ def explore_card(driver, folder):
 
     time.sleep(1)
     ensure_clean_screen(driver)
-    save_dump(driver, folder, "card_main")
+    scroll_and_capture(driver, folder, "card_main")
 
-    # 스크롤해서 하단도 캡처
-    scroll_down(driver)
-    save_dump(driver, folder, "card_scrolled")
-    scroll_up(driver)
-
-    # 서브 탭 캡처
+    # 서브 탭 캡처 (각 탭에서도 스크롤 캡처 수행)
     _capture_sub_tabs(driver, folder, "card")
+
+
+def _has_screen_changed(before_texts, driver):
+    """클릭 전/후 화면이 변했는지 판별.
+
+    클릭 후 page_source의 텍스트를 추출하여, 클릭 전 텍스트와 비교.
+    새로운 텍스트가 3개 이상이거나, 전체 텍스트의 30% 이상 변했으면 화면 전환으로 판단.
+
+    Returns:
+        tuple: (changed: bool, after_source: str)
+    """
+    try:
+        after_source = driver.page_source
+    except Exception:
+        return False, ""
+    after_texts = _extract_visible_texts(after_source)
+    new_texts = after_texts - before_texts
+    removed_texts = before_texts - after_texts
+    total_change = len(new_texts) + len(removed_texts)
+    total_all = len(before_texts | after_texts) or 1
+
+    change_ratio = total_change / total_all
+    changed = len(new_texts) >= 3 or change_ratio >= 0.3
+
+    if changed:
+        print(f"    → 화면 변화 감지 (신규 텍스트 {len(new_texts)}개, 변화율 {change_ratio:.0%})")
+    else:
+        print(f"    → 화면 변화 없음 (신규 텍스트 {len(new_texts)}개, 변화율 {change_ratio:.0%})")
+    return changed, after_source
+
+
+def explore_card_3rd_depth(driver, folder):
+    """Card 탭 3rd depth 서브화면 캡처 (c1~c12)
+
+    Card Features 화면에서 클릭 가능한 요소를 하나씩 진입 → 캡처 → 복귀.
+
+    핵심 로직:
+    - 클릭 전 화면 텍스트 저장 → 클릭 → 화면 변화 감지 → 변화 있으면 캡처
+    - 클릭 후 dismiss_all_popups를 호출하지 않음 (서브화면을 닫아버리는 문제 방지)
+    - 서브화면에서는 save_dump만 사용 (ViewPager 중복 캡처 방지)
+
+    특수 처리:
+    - c9 (upArrow): 화면 이동이 아닌 UI 확장 → 현재 화면 캡처
+    - c10 (ViewPager +): 스와이프 후 + 버튼 클릭
+    - c11~c12: 스크롤 아래 요소 → 스크롤 후 접근
+    """
+    print("\n===== [CARD 3rd Depth] 서브화면 탐색 =====")
+
+    def _go_to_card():
+        """Card 탭으로 이동 + 팝업 정리 (탐색 시작 전에만 사용)"""
+        if not click_tab(driver, "Card"):
+            return False
+        time.sleep(2)
+        dismiss_all_popups(driver, max_rounds=2)
+        ensure_clean_screen(driver)
+        return True
+
+    def _get_card_texts():
+        """현재 Card 화면의 텍스트를 추출 (비교 기준용)"""
+        try:
+            return _extract_visible_texts(driver.page_source)
+        except Exception:
+            return set()
+
+    if not _go_to_card():
+        print("  [error] Card 탭 클릭 실패")
+        return
+
+    # --- 초기 화면(스크롤 없이 보이는) 요소들 ---
+    # popup_type: 클릭 시 팝업/바텀시트로 열리는 요소 (verify=False로 캡처)
+    top_elements = [
+        ("c1", "llBalance", "Balance_Detail", False),
+        ("c2", "btn_gme_wallet_transfer", "Transfer", False),
+        ("c3", "btn_gme_wallet_deposit", "Deposit", False),
+        ("c4", "rlCashBackView", "Cashback", False),
+        ("c5", "rlCardUsageView", "Card_Usage", False),
+        ("c6", "rlTransportationHistoryView", "Transportation_History", False),
+        ("c7", "zeropay_scan_icon", "QR_Scan", True),
+        ("c8", "transferIcon", "Transport_Charge", True),
+    ]
+
+    for code, rid, name, is_popup in top_elements:
+        # 매번 Card 탭에서 시작
+        if not _go_to_card():
+            print(f"  [error] Card 복귀 실패 → 중단")
+            return
+
+        try:
+            # 클릭 전 화면 텍스트 저장
+            before_texts = _get_card_texts()
+
+            el = driver.find_element(AppiumBy.ID, _id(rid))
+            el.click()
+            print(f"  [click] {code}: {name} ({rid})")
+            time.sleep(2.5)
+
+            # 화면 변화 감지 (dismiss_all_popups 호출 안 함!)
+            changed, _ = _has_screen_changed(before_texts, driver)
+
+            if changed:
+                # 팝업/바텀시트 요소는 verify=False로 캡처 (닫히는 것 방지)
+                save_dump(driver, folder, f"card3_{code}_{name}", verify=not is_popup)
+
+                if is_popup:
+                    # 팝업 형태는 스크롤 불필요 → back으로 닫기
+                    print(f"    → 팝업/바텀시트 형태 → 캡처 후 닫기")
+                    driver.back()
+                    time.sleep(1)
+                else:
+                    # 일반 서브화면: 스크롤 아래 콘텐츠 확인
+                    scroll_down(driver)
+                    time.sleep(0.5)
+                    try:
+                        scrolled_source = driver.page_source
+                        scrolled_texts = _extract_visible_texts(scrolled_source)
+                        if scrolled_texts - before_texts:
+                            save_dump(driver, folder, f"card3_{code}_{name}_scrolled")
+                    except Exception:
+                        pass
+                    scroll_up(driver, times=1)
+                    # 복귀: iv_back → 실패 시 Android back
+                    go_back(driver)
+                    time.sleep(1)
+            else:
+                print(f"  [skip] {code}: 화면 변화 없음 → 캡처 생략")
+                # 변화 없어도 복귀 시도 (혹시 이동했을 수 있으므로)
+                go_back(driver)
+                time.sleep(1)
+
+        except NoSuchElementException:
+            print(f"  [warn] {code}: '{rid}' 요소 없음 → 스킵")
+        except Exception as e:
+            print(f"  [error] {code}: {name} - {e}")
+            try:
+                driver.back()
+                time.sleep(1)
+            except Exception:
+                pass
+
+    # --- c9: upArrow (확장 메뉴 - 화면 이동 아님, UI 확장) ---
+    print("\n  --- c9: upArrow (확장 메뉴) ---")
+    if not _go_to_card():
+        print("  [error] Card 복귀 실패")
+        return
+
+    try:
+        before_texts = _get_card_texts()
+        arrow = driver.find_element(AppiumBy.ID, _id("upArrow"))
+        arrow.click()
+        print("  [click] c9: upArrow (메뉴 확장)")
+        time.sleep(1.5)
+
+        changed, _ = _has_screen_changed(before_texts, driver)
+        if changed:
+            save_dump(driver, folder, "card3_c9_Expanded_Menu")
+        else:
+            print("  [skip] c9: 변화 없음 → 캡처 생략")
+
+        # 다시 접기
+        try:
+            arrow2 = driver.find_element(AppiumBy.ID, _id("upArrow"))
+            arrow2.click()
+            time.sleep(0.5)
+        except Exception:
+            pass
+    except NoSuchElementException:
+        print("  [warn] c9: 'upArrow' 없음 → 스킵")
+    except Exception as e:
+        print(f"  [error] c9: upArrow - {e}")
+
+    # --- c10: ViewPager 2페이지 → '+' 버튼 (카드 추가) ---
+    print("\n  --- c10: ViewPager + 버튼 (카드 추가) ---")
+    if not _go_to_card():
+        print("  [error] Card 복귀 실패")
+        return
+
+    try:
+        before_texts = _get_card_texts()
+
+        # ViewPager 영역 찾기
+        vp = driver.find_element(AppiumBy.ID, _id("gmeCardViewPager"))
+        vp_rect = vp.rect
+        print(f"  [info] ViewPager 영역: x={vp_rect['x']}, y={vp_rect['y']}, "
+              f"w={vp_rect['width']}, h={vp_rect['height']}")
+
+        center_y = vp_rect['y'] + vp_rect['height'] // 2
+        # 스와이프 범위를 ViewPager 내부로 확실히 제한
+        margin = int(vp_rect['width'] * 0.1)
+        swipe_start = vp_rect['x'] + vp_rect['width'] - margin  # 우측 끝 근처
+        swipe_end = vp_rect['x'] + margin                        # 좌측 끝 근처
+
+        # 오른쪽 → 왼쪽 스와이프 (느린 속도로 확실하게)
+        driver.swipe(swipe_start, center_y, swipe_end, center_y, 1000)
+        print("  [swipe] ViewPager → 2페이지 (시도 1)")
+        time.sleep(2)
+
+        changed, _ = _has_screen_changed(before_texts, driver)
+        if not changed:
+            # 재시도: 더 느리게 + 약간 다른 y좌표
+            alt_y = vp_rect['y'] + int(vp_rect['height'] * 0.4)
+            driver.swipe(swipe_start, alt_y, swipe_end, alt_y, 1500)
+            print("  [swipe] ViewPager → 2페이지 (시도 2, 느린 속도)")
+            time.sleep(2)
+            changed, _ = _has_screen_changed(before_texts, driver)
+
+        if not changed:
+            # 3차 시도: 화면 전체 너비 기준 스와이프
+            screen = driver.get_window_size()
+            sw = screen['width']
+            driver.swipe(int(sw * 0.85), center_y, int(sw * 0.15), center_y, 1200)
+            print("  [swipe] ViewPager → 2페이지 (시도 3, 전체 너비)")
+            time.sleep(2)
+            changed, _ = _has_screen_changed(before_texts, driver)
+
+        if changed:
+            # 2페이지 캡처 (verify=False: 팝업 아닌 정상 화면)
+            save_dump(driver, folder, "card3_c10_ViewPager_Page2", verify=False)
+
+            # 2페이지에서 클릭 가능한 요소 탐색 (+ 버튼 찾기)
+            try:
+                source_p2 = driver.page_source
+                root = ET.fromstring(source_p2)
+                # clickable 요소 중 ViewPager 내부의 것을 모두 로그
+                vp_clickables = []
+                for elem in root.iter():
+                    if elem.get("clickable") == "true":
+                        rid_val = elem.get("resource-id", "")
+                        short = rid_val.split("/")[-1] if "/" in rid_val else rid_val
+                        text = elem.get("text", "")
+                        desc = elem.get("content-desc", "")
+                        cls = elem.get("class", "")
+                        vp_clickables.append((short, text, desc, cls))
+                if vp_clickables:
+                    print(f"    → 2페이지 클릭 가능 요소 {len(vp_clickables)}개:")
+                    for s, t, d, c in vp_clickables[:10]:
+                        label = t or d or s or c
+                        print(f"      - {s}: '{label}'")
+            except Exception:
+                pass
+
+            # '+' 버튼 클릭 시도
+            plus_ids = ["iv_add_card", "btn_add_card", "addCard", "add_card",
+                        "imgAddCard", "add_new_card", "btnAddCard"]
+            plus_clicked = False
+            for pid in plus_ids:
+                try:
+                    plus_btn = driver.find_element(AppiumBy.ID, _id(pid))
+                    plus_btn.click()
+                    plus_clicked = True
+                    print(f"  [click] c10: + 버튼 ({pid})")
+                    break
+                except NoSuchElementException:
+                    continue
+
+            if not plus_clicked:
+                try:
+                    plus_btn = driver.find_element(
+                        AppiumBy.XPATH,
+                        "//*[contains(@content-desc,'add') or contains(@content-desc,'Add') "
+                        "or contains(@content-desc,'카드') or @text='+' or @text='Add Card']"
+                    )
+                    plus_btn.click()
+                    plus_clicked = True
+                    print("  [click] c10: + 버튼 (XPath)")
+                except NoSuchElementException:
+                    print("  [warn] c10: + 버튼 미확인 → 2페이지 캡처만 완료")
+
+            if plus_clicked:
+                time.sleep(2.5)
+                save_dump(driver, folder, "card3_c10_Add_Card")
+                go_back(driver)
+                time.sleep(1)
+        else:
+            print("  [skip] c10: ViewPager 스와이프 3회 시도 실패")
+
+        # Card 탭으로 복귀 (ViewPager 원위치)
+        click_tab(driver, "Card")
+        time.sleep(1)
+
+    except NoSuchElementException:
+        print("  [warn] c10: 'gmeCardViewPager' 없음 → 스킵")
+    except Exception as e:
+        print(f"  [error] c10: ViewPager - {e}")
+
+    # --- c11~c12: 스크롤 아래 요소 ---
+    # is_popup: 팝업/바텀시트 형태 여부
+    print("\n  --- c11~c12: 스크롤 아래 요소 ---")
+    scroll_elements = [
+        ("c11", "performance_card_layout", "EasyGo_Card", False),
+        ("c12", "rlGlobalQRScanView", "Global_QR_Scan", True),
+    ]
+
+    for code, rid, name, is_popup in scroll_elements:
+        if not _go_to_card():
+            print(f"  [error] Card 복귀 실패 → 중단")
+            return
+
+        full_rid = _id(rid)
+        found = False
+        before_texts = _get_card_texts()
+
+        # 방법 1: UiScrollable로 자동 스크롤하여 요소 찾기
+        try:
+            el = driver.find_element(
+                AppiumBy.ANDROID_UIAUTOMATOR,
+                f'new UiScrollable(new UiSelector().scrollable(true))'
+                f'.scrollIntoView(new UiSelector().resourceId("{full_rid}"))'
+            )
+            el.click()
+            print(f"  [click] {code}: {name} (UiScrollable)")
+            found = True
+        except Exception as e1:
+            print(f"  [info] {code}: UiScrollable 실패 ({e1.__class__.__name__})")
+
+            # 방법 2: 수동 스크롤 + find_element (5회까지)
+            if not _go_to_card():
+                continue
+            before_texts = _get_card_texts()
+
+            for scroll_try in range(5):
+                scroll_down(driver)
+                time.sleep(1)
+                # ID로 먼저 찾기
+                try:
+                    el = driver.find_element(AppiumBy.ID, full_rid)
+                    el.click()
+                    print(f"  [click] {code}: {name} (스크롤 {scroll_try + 1}회 후, ID)")
+                    found = True
+                    break
+                except NoSuchElementException:
+                    pass
+                # DOM에 있는지 체크
+                try:
+                    src = driver.page_source
+                    if rid in src:
+                        print(f"  [debug] {code}: 스크롤 {scroll_try + 1}회 후 DOM에 존재")
+                except Exception:
+                    pass
+
+            # 방법 3: text 기반 검색 (EasyGo, Global QR)
+            if not found:
+                text_map = {
+                    "performance_card_layout": "EasyGo",
+                    "rlGlobalQRScanView": "Global QR",
+                }
+                search_text = text_map.get(rid)
+                if search_text:
+                    if not _go_to_card():
+                        continue
+                    before_texts = _get_card_texts()
+                    for scroll_try in range(5):
+                        scroll_down(driver)
+                        time.sleep(1)
+                        try:
+                            el = driver.find_element(
+                                AppiumBy.XPATH,
+                                f"//*[contains(@text, '{search_text}')]"
+                                f"/ancestor::*[@clickable='true'][1]"
+                            )
+                            el.click()
+                            print(f"  [click] {code}: {name} (text '{search_text}' 기반)")
+                            found = True
+                            break
+                        except NoSuchElementException:
+                            pass
+
+        if found:
+            time.sleep(2.5)
+            changed, _ = _has_screen_changed(before_texts, driver)
+            if changed:
+                save_dump(driver, folder, f"card3_{code}_{name}", verify=not is_popup)
+                if is_popup:
+                    print(f"    → 팝업/바텀시트 형태 → 캡처 후 닫기")
+                    driver.back()
+                    time.sleep(1)
+                else:
+                    go_back(driver)
+                    time.sleep(1)
+            else:
+                print(f"  [skip] {code}: 화면 변화 없음 → 캡처 생략")
+                go_back(driver)
+                time.sleep(1)
+        else:
+            print(f"  [warn] {code}: '{rid}' 스크롤 후에도 없음 → 스킵")
+
+    print("\n===== [CARD 3rd Depth] 탐색 완료 =====")
 
 
 def explore_event(driver, folder):
@@ -1081,14 +1792,9 @@ def explore_event(driver, folder):
 
     time.sleep(1)
     ensure_clean_screen(driver)
-    save_dump(driver, folder, "event_main")
+    scroll_and_capture(driver, folder, "event_main")
 
-    # 스크롤해서 하단도 캡처
-    scroll_down(driver)
-    save_dump(driver, folder, "event_scrolled")
-    scroll_up(driver)
-
-    # 서브 탭 캡처
+    # 서브 탭 캡처 (각 탭에서도 스크롤 캡처 수행)
     _capture_sub_tabs(driver, folder, "event")
 
 
@@ -1101,12 +1807,7 @@ def explore_profile(driver, folder):
 
     time.sleep(1)
     ensure_clean_screen(driver)
-    save_dump(driver, folder, "profile_main")
-
-    # 스크롤 캡처
-    scroll_down(driver)
-    save_dump(driver, folder, "profile_scrolled")
-    scroll_up(driver)
+    scroll_and_capture(driver, folder, "profile_main")
 
     # Profile 내 클릭 가능한 메뉴 항목 탐색
     exclude_kw = ["password", "비밀번호", "logout", "로그아웃", "탈퇴",
@@ -1173,35 +1874,62 @@ def main():
         print("[explore] 앱 실행 확인 완료")
 
         # 앱 로딩 대기 (로그인 화면 또는 Home 화면이 나올 때까지)
+        # 모든 검사를 implicitly_wait(0) + find_elements로 수행 → 빠른 감지
         print("[explore] 앱 화면 로딩 대기...")
         app_ready = False
-        for wait_round in range(15):  # 최대 30초 대기
+        for wait_round in range(20):  # 최대 40초 대기
             time.sleep(2)
+            driver.implicitly_wait(0)
             try:
-                # Home 탭 확인 (이미 로그인된 상태)
-                driver.find_element(
+                # 1. Home 탭 확인 (이미 로그인된 상태)
+                home_els = driver.find_elements(
                     AppiumBy.XPATH, "//*[@content-desc='Home']"
                 )
-                print("[explore] Home 화면 감지 → 이미 로그인된 상태")
-                app_ready = True
-                break
-            except NoSuchElementException:
-                pass
+                if home_els:
+                    print("[explore] Home 화면 감지 → 이미 로그인된 상태")
+                    app_ready = True
+                    break
+
+                # 2. 로그인 화면 확인 (usernameId 또는 btn_lgn)
+                login_els = driver.find_elements(AppiumBy.ID, _id("usernameId"))
+                login_btn_els = driver.find_elements(AppiumBy.ID, _id("btn_lgn"))
+                if login_els or login_btn_els:
+                    print("[explore] 로그인 화면 감지")
+                    app_ready = True
+                    break
+
+                # 3. Simple Password 잠금화면 (resource-id로 감지 - 더 안정적)
+                pin_dots = driver.find_elements(AppiumBy.ID, _id("input_dot_1"))
+                login_bypass = driver.find_elements(AppiumBy.ID, _id("loginpwidhidpass"))
+                if pin_dots or login_bypass:
+                    print("[explore] Simple Password 잠금화면 감지 → PIN 직접 입력")
+                    if _enter_simple_pin(driver, _SIMPLE_PIN):
+                        time.sleep(3)
+                        app_ready = True
+                        break
+                    else:
+                        # PIN 입력 실패 → ID/Password 우회
+                        print("[explore] PIN 입력 실패 → ID/Password 우회 시도")
+                        _handle_simple_password_screen(driver, timeout=5)
+                        time.sleep(2)
+                        app_ready = True
+                        break
+
+                # 4. Connection Failed 등 에러 팝업 (btn_diaog_ok)
+                error_ok = driver.find_elements(AppiumBy.ID, _id("btn_diaog_ok"))
+                if error_ok:
+                    print(f"  [wait] 에러 팝업 감지 → OK 클릭")
+                    error_ok[0].click()
+                    time.sleep(2)
+                    continue
+
             except WebDriverException as e:
                 if "instrumentation" in str(e).lower():
                     print(f"  [wait] UiAutomator2 재시작 중... ({(wait_round + 1) * 2}초)")
                     time.sleep(3)
                     continue
-                pass
-
-            # 로그인 화면 확인
-            try:
-                if check_login_needed(driver):
-                    print("[explore] 로그인 화면 감지")
-                    app_ready = True
-                    break
-            except WebDriverException:
-                pass
+            finally:
+                driver.implicitly_wait(2)
 
             print(f"  [wait] 앱 로딩 중... ({(wait_round + 1) * 2}초)")
 
@@ -1248,9 +1976,10 @@ def main():
                       resource_id_prefix=RID, set_english=False)
                 print("[explore] 로그인 완료")
             except Exception as login_err:
-                # 로그인 실패 시 디버그 덤프 저장
+                # 로그인 실패 시 디버그 덤프 + logcat 저장
                 print(f"[explore] 로그인 실패: {login_err}")
                 save_dump(driver, folder, "debug_login_failed", verify=False)
+                save_error_logcat(driver, folder, "error_login_failed")
                 raise
             time.sleep(3)
             # 로그인 후: Home 탭이 나타날 때까지 대기하면서 팝업 처리
@@ -1258,8 +1987,8 @@ def main():
             print("[explore] 로그인 후 Home 화면 대기...")
             _wait_for_home_after_login(driver, folder, timeout=30)
         else:
-            print("[explore] 이미 로그인된 상태 - 팝업 정리")
-            dismiss_all_popups(driver, max_rounds=3)
+            print("[explore] 이미 로그인된 상태 - Home 화면 대기 및 팝업 정리")
+            _wait_for_home_after_login(driver, folder, timeout=30)
 
         # Home 탭 최종 확인
         try:
@@ -1278,19 +2007,42 @@ def main():
         print(f"[explore] 초기 화면 상태: {status}\n")
 
         # 탐색 실행 (각 섹션 독립 에러 처리, UiAutomator2 크래시 복구)
-        sections = [
-            ("Home", explore_home),
-            ("Hamburger", explore_hamburger),
-            ("History", explore_history),
-            ("Card", explore_card),
-            ("Event", explore_event),
-            ("Profile", explore_profile),
-        ]
+        # 실행 옵션: python explore_app.py [섹션명]
+        #   전체: python explore_app.py (인자 없음)
+        #   특정: python explore_app.py card_3rd
+        all_sections = {
+            "home": ("Home", explore_home),
+            "hamburger": ("Hamburger", explore_hamburger),
+            "history": ("History", explore_history),
+            "card": ("Card", explore_card),
+            "card_3rd": ("Card 3rd Depth", explore_card_3rd_depth),
+            "event": ("Event", explore_event),
+            "profile": ("Profile", explore_profile),
+        }
+        # 기본 실행 순서 (전체 탐색 시)
+        default_order = ["home", "hamburger", "history", "card", "event", "profile"]
+
+        # 커맨드라인 인자 확인
+        target = sys.argv[1].lower() if len(sys.argv) > 1 else None
+        if target and target in all_sections:
+            sections = [all_sections[target]]
+            print(f"[explore] 선택된 섹션: {target}")
+        elif target:
+            print(f"[explore] 알 수 없는 섹션: '{target}'")
+            print(f"[explore] 사용 가능: {', '.join(all_sections.keys())}")
+            return
+        else:
+            sections = [all_sections[k] for k in default_order]
         for name, func in sections:
             try:
                 func(driver, folder)
             except Exception as e:
                 print(f"\n[explore] {name} 탐색 중 에러: {type(e).__name__}: {e}")
+                # 에러 시 logcat 캡처
+                try:
+                    save_error_logcat(driver, folder, f"error_{name.lower()}")
+                except Exception:
+                    pass
                 # UiAutomator2 크래시 시 드라이버 재생성
                 if "instrumentation" in str(e).lower() or "proxy" in str(e).lower():
                     print("[explore] UiAutomator2 크래시 감지 - 드라이버 재생성")
