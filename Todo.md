@@ -1,6 +1,21 @@
 # Todo - 해결 필요 항목
 
-> 마지막 업데이트: 2026-02-19
+> 마지막 업데이트: 2026-02-21
+
+## 2026-02-21
+
+### Allure Dashboard (Phase 2 - 추후 진행)
+- [ ] Vercel Blob 연동 (스크린샷/비디오/로그 첨부파일 저장)
+- [ ] 상세 페이지에서 첨부파일 실제 뷰어 구현 (이미지 미리보기, 비디오 재생)
+- [ ] allure-dashboard GitHub 저장소 생성 및 Git 연결 → push 시 자동 배포
+- [ ] `--upload` 옵션을 기본값으로 변경 검토 (Vercel URL 확정 후)
+- [ ] 대시보드 커스텀 도메인 설정 검토
+
+### 알려진 사항
+- allure-dashboard는 현재 `~/allure-dashboard/` 로컬 저장소 (GitHub 미연결)
+- Vercel은 CLI 배포 방식으로 운영 중 (Git 연동 배포로 전환 가능)
+
+---
 
 ## 2026-02-19
 

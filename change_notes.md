@@ -1,5 +1,40 @@
 # Change Notes
 
+## 2026-02-21
+
+### Allure Dashboard - Next.js 웹 대시보드 구축 + Vercel 배포
+
+기존 로컬 전용(`tools/serve.py`) 대시보드를 Next.js 기반 웹 대시보드로 전환하여 Vercel에 배포 완료.
+팀원 누구나 웹에서 테스트 결과를 확인할 수 있게 됨.
+
+**프로덕션 URL**: https://allure-dashboard-three.vercel.app
+
+#### 신규 프로젝트: `~/allure-dashboard/`
+- **기술 스택**: Next.js 15 (App Router) + TypeScript + Tailwind CSS + Prisma 6 + Vercel Postgres (Neon)
+- **API 엔드포인트**:
+  - `GET /api/runs` - 실행 목록 조회 (필터: platform, status, q)
+  - `POST /api/runs` - 실행 결과 등록
+  - `GET /api/runs/[timestamp]` - 실행 상세 조회
+- **대시보드 UI**:
+  - 메인 페이지: 통계 카드, 패스율 바, 필터/검색, 테이블 (스택 바 차트 포함)
+  - 상세 페이지: 원형 패스율, Git 정보, Suites/Behaviors, Environment
+  - 다크 테마: 뉴트럴 블랙 + 흰색 포인트 배색
+- **DB 스키마**: Run (테스트 실행 메타데이터), Artifact (첨부파일, Phase 2 대비)
+
+#### appium 프로젝트 변경
+- **`tools/upload_to_dashboard.py`** (신규): 대시보드 API로 데이터 업로드 스크립트
+  - `--all`: 기존 리포트 일괄 업로드 (마이그레이션용)
+  - `--dashboard-url`: 대시보드 API URL 지정
+  - `update_dashboard.py`의 데이터 읽기 로직 재사용
+- **`tools/run_allure.py`** (수정): `--upload`, `--dashboard-url` 옵션 추가
+  - 테스트 완료 후 자동으로 대시보드에 업로드 가능
+
+#### 배포 및 마이그레이션
+- Vercel CLI로 프로젝트 배포, Neon Postgres 연결
+- 기존 19개 리포트 일괄 업로드 완료
+
+---
+
 ## 2026-02-19
 
 ### explore_app.py 인터랙티브 요소 검증 시스템 추가

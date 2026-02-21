@@ -156,6 +156,17 @@ def main() -> int:
         help="리포트 생성 후 allure open 실행",
     )
     parser.add_argument(
+        "--upload",
+        action="store_true",
+        default=False,
+        help="리포트 생성 후 대시보드 API에 업로드",
+    )
+    parser.add_argument(
+        "--dashboard-url",
+        default="http://localhost:3000",
+        help="대시보드 API URL (--upload 사용 시)",
+    )
+    parser.add_argument(
         "pytest_args",
         nargs=argparse.REMAINDER,
         help="pytest 인자들 (예: -- tests/android/gme1_test.py -v --platform=android)",
@@ -225,6 +236,20 @@ def main() -> int:
     print(f"[run_allure] report  : {report_dir}")
     print(f"[run_allure] latest  : {Path(args.reports_root) / 'LATEST' / 'index.html'}")
     print(f"[run_allure] dash    : {Path(args.reports_root) / 'dashboard' / 'index.html'}")
+
+    if args.upload:
+        try:
+            upload_script = Path(__file__).resolve().parent / "upload_to_dashboard.py"
+            upload_cmd = [
+                sys.executable, str(upload_script),
+                "--reports-root", str(args.reports_root),
+                "--dashboard-url", args.dashboard_url,
+                timestamp,
+            ]
+            print("[run_allure] upload:", " ".join(upload_cmd))
+            subprocess.run(upload_cmd, env=env, check=False)
+        except Exception as e:
+            print(f"[run_allure] upload skipped: {e}")
 
     if args.open:
         allure_open_cmd = ["allure", "open", str(report_dir)]
