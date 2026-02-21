@@ -1,44 +1,12 @@
 # Todo - 해결 필요 항목
 
-> 마지막 업데이트: 2026-02-21
-
-## 2026-02-21
-
-### Allure Dashboard (Phase 2 완료, Phase 3 검토)
-- [x] Vercel Blob 연동 (스크린샷/비디오/로그 첨부파일 저장)
-- [x] 상세 페이지에서 첨부파일 뷰어 구현 (이미지 미리보기, 비디오 재생, 텍스트 뷰어)
-- [x] allure-dashboard GitHub 연동 → push 시 자동 배포 활성화
-- [x] `--upload` 옵션 기본 활성화 + 프로덕션 URL 기본값 설정
-
-### 알려진 사항
-- allure-dashboard: GitHub `sphh12/allure-dashboard` 연결 완료, Git push → Vercel 자동 배포
-- appium `.env`에 `BLOB_READ_WRITE_TOKEN` 추가됨 (Blob 업로드용)
-
----
-
-## 2026-02-19
-
-### ~~Card Features 3rd Depth 자동 캡처 (c1~c12)~~ ✅
-
-- ~~explore_app.py에 `explore_card_3rd_depth` 함수 구현~~
-- ~~화면 변화 감지 (`_has_screen_changed`) 로직 추가~~
-- ~~팝업/바텀시트 캡처 (`verify=False`) 처리~~
-- ~~ViewPager 스와이프 캡처 (3단계 시도 전략)~~
-- **결과**: 8/12 성공 (c1, c4~c10)
-  - c2/c3: Home 화면 전용 ID → Card 화면에 없음 (ID 매핑 오류)
-  - c11/c12: DOM에 요소 미존재 (동적 로딩, 앱 상태 의존)
-
-### ~~explore_app.py 검증 기능 추가~~ ✅
-
-- ~~`_log_interactive_elements`: XML 파싱으로 인터랙티브 요소 분류/검증~~
-- ~~`_capture_viewpager_pages`: ViewPager 자동 감지 및 페이지별 캡처~~
-- ~~`scroll_and_capture`에 검증 로직 통합~~
+> 마지막 업데이트: 2026-02-22
 
 ---
 
 ## 진행 중
 
-### 3rd Depth 미캡처 화면 (진행 중)
+### 3rd Depth 미캡처 화면
 
 - **Card Features 미해결** (4개):
   - c2 (`btn_gme_wallet_transfer`): Home 전용 ID, Card 화면에서 올바른 ID 확인 필요
@@ -123,3 +91,23 @@
 | `USE_LIVE=true python tools/explore_app.py` | 전체 탐색 |
 | `python tools/explore_app.py card_3rd` | Card 3rd Depth만 |
 | `python tools/explore_app.py home` | Home 탭만 |
+
+---
+
+## 완료 아카이브
+
+### 2026-02-22
+- [x] 문서 업데이트 (README.md 전면 재작성, ALLURE_REPORT_GUIDE.md, CLAUDE.md)
+- [x] run_allure.py 자동 패키지 설치 기능 추가
+
+### 2026-02-21
+- [x] Vercel Blob 연동 (스크린샷/비디오/로그 첨부파일 저장)
+- [x] 상세 페이지에서 첨부파일 뷰어 구현 (이미지 미리보기, 비디오 재생, 텍스트 뷰어)
+- [x] allure-dashboard GitHub 연동 → push 시 자동 배포 활성화
+- [x] `--upload` 옵션 기본 활성화 + 프로덕션 URL 기본값 설정
+- [x] iOS 테스트 실행 + 대시보드 업로드 확인
+- [x] 빈 실행 이력 삭제 (DELETE API 추가)
+
+### 2026-02-19
+- [x] explore_app.py Card 3rd Depth 자동 캡처 (8/12 성공)
+- [x] explore_app.py 검증 기능 추가 (인터랙티브 요소 분류, ViewPager 자동 감지)
