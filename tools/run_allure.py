@@ -6,6 +6,46 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+# 필수 패키지 목록 (import명, pip 패키지명)
+_REQUIRED_PACKAGES = [
+    ("pytest", "pytest"),
+    ("allure", "allure-pytest"),
+    ("appium", "Appium-Python-Client"),
+    ("selenium", "selenium"),
+    ("dotenv", "python-dotenv"),
+]
+
+
+def _ensure_dependencies() -> None:
+    """필수 패키지가 설치되어 있는지 확인하고, 없으면 자동 설치합니다."""
+    missing: list[str] = []
+    for import_name, pip_name in _REQUIRED_PACKAGES:
+        try:
+            __import__(import_name)
+        except ImportError:
+            missing.append(pip_name)
+
+    if not missing:
+        return
+
+    print(f"[run_allure] 누락 패키지 감지: {', '.join(missing)}")
+
+    # requirements.txt가 있으면 전체 설치, 없으면 누락분만 설치
+    req_file = Path(__file__).resolve().parent.parent / "requirements.txt"
+    if req_file.exists():
+        print(f"[run_allure] requirements.txt로 전체 패키지 설치 중...")
+        cmd = [sys.executable, "-m", "pip", "install", "-r", str(req_file), "-q"]
+    else:
+        print(f"[run_allure] 누락 패키지 설치 중: {', '.join(missing)}")
+        cmd = [sys.executable, "-m", "pip", "install", *missing, "-q"]
+
+    result = subprocess.run(cmd)
+    if result.returncode == 0:
+        print("[run_allure] 패키지 설치 완료")
+    else:
+        print("[run_allure] 패키지 설치 실패 — 수동으로 설치하세요: pip install -r requirements.txt")
+        sys.exit(1)
+
 
 def _find_latest_timestamp_dir(root: Path) -> Path | None:
     if not root.exists():
@@ -121,6 +161,8 @@ def _inject_custom_css(report_dir: Path) -> None:
 
 
 def main() -> int:
+    _ensure_dependencies()
+
     parser = argparse.ArgumentParser(
         description=(
             "pytest 실행 결과를 날짜/시간별 Allure 결과/리포트로 저장합니다. "

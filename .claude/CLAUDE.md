@@ -139,12 +139,23 @@ appium/
 - `--allure-attach=hybrid|all` - Allure 첨부 정책
 
 #### 7. Allure 리포트 (`tools/run_allure.py`)
-- 테스트 결과 자동 수집 → HTML 리포트 생성
+- 테스트 결과 자동 수집 → HTML 리포트 생성 → 대시보드 업로드
+- 필수 패키지 자동 감지/설치 (`_ensure_dependencies`)
 - `allure-results/YYYYMMDD_HHMMSS/` - 타임스탬프별 결과 보관
 - `allure-reports/LATEST/` - 최신 리포트 고정 경로
-- `allure-reports/dashboard/` - 전체 실행 이력 대시보드
+- `allure-reports/dashboard/` - 로컬 실행 이력 대시보드
+- `--upload` (기본 켜짐): Vercel 웹 대시보드에 결과 업로드
+- `--no-upload`: 업로드 끄기
+- `--open`: 리포트 생성 후 브라우저에서 열기
 - 실패 시 자동 첨부: 스크린샷, page_source.xml, capabilities.json, logcat.txt
 - **가이드 문서**: `docs/ALLURE_REPORT_GUIDE.md`
+
+#### 8. 대시보드 업로드 (`tools/upload_to_dashboard.py`)
+- Allure 리포트를 Vercel 웹 대시보드(https://allure-dashboard-three.vercel.app)에 업로드
+- 테스트 통계 (passed/failed/broken/skipped) + 첨부파일 (Vercel Blob)
+- 첨부파일: 스크린샷(PNG), 비디오(MP4), logcat, page_source, capabilities
+- `BLOB_READ_WRITE_TOKEN` 필요 (없으면 첨부파일 건너뜀, 메타데이터만 업로드)
+- **사용법**: `python tools/upload_to_dashboard.py <timestamp>` 또는 `--all`
 
 ### 기존 가이드 문서 목록 (`docs/`)
 
@@ -169,6 +180,7 @@ appium/
 | `GME_RESOURCE_ID_PREFIX` | resource-id 접두사 | 선택 (기본: Staging 패키지) |
 | `APPIUM_HOST` / `APPIUM_PORT` | Appium 서버 주소 | 선택 (기본: 127.0.0.1:4723) |
 | `ANDROID_UDID` | 실물 디바이스 시리얼 | 실기기 테스트 시 필수 |
+| `BLOB_READ_WRITE_TOKEN` | Vercel Blob 토큰 (첨부파일 업로드용) | 선택 (미설정 시 첨부파일 건너뜀) |
 
 ### 코드 작성 전 반드시 확인
 

@@ -1,5 +1,38 @@
 # Change Notes
 
+## 2026-02-22
+
+### 문서 업데이트 (README.md, ALLURE_REPORT_GUIDE.md, CLAUDE.md)
+
+Phase 2 완료 후 변경된 프로젝트 구조와 워크플로우를 문서에 반영.
+
+#### README.md (전면 재작성)
+- 클론 URL: GitLab → GitHub로 변경
+- 테스트 실행: `run_allure.py` 중심 + iOS 명령어 추가
+- 프로젝트 구조: `tools/` 전체 파일, `utils/`, `tests/ios/` 반영
+- Allure 섹션: Vercel 웹 대시보드 URL + 업로드 워크플로우 추가
+- 환경 설정: macOS + Windows 양쪽 가이드
+- 설치 방법: macOS brew 명령어 추가, iOS 설정 단계 추가
+- 환경 변수: `BLOB_READ_WRITE_TOKEN` 추가
+- 문서 목록 테이블, 문제 해결 항목 업데이트
+
+#### ALLURE_REPORT_GUIDE.md
+- 섹션 6: "웹 대시보드 (Vercel)" 추가 (업로드 방식, 수동 업로드, 첨부파일 조건)
+- 섹션 6.1: 기존 로컬 대시보드 설명 분리
+
+#### CLAUDE.md
+- `run_allure.py` 설명: `--upload/--no-upload`, 자동 패키지 설치 반영
+- `upload_to_dashboard.py` 도구 섹션 (8번) 신규 추가
+- 환경변수 테이블: `BLOB_READ_WRITE_TOKEN` 추가
+
+### run_allure.py 자동 패키지 설치 기능 추가
+
+- `_ensure_dependencies()`: pytest, allure-pytest, Appium-Python-Client, selenium, python-dotenv 자동 감지/설치
+- requirements.txt 기반 전체 설치 또는 누락분만 개별 설치
+- 패키지 미설치로 인한 실행 실패 예방
+
+---
+
 ## 2026-02-21
 
 ### Phase 2: Vercel Blob 첨부파일 + 뷰어 구현

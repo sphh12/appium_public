@@ -198,36 +198,59 @@ Allure UI에서 가장 자주 보는 상태 의미는 아래와 같습니다.
 
 ---
 
-## 6) 팁: 로컬에서 최신 리포트 빠르게 열기
+## 6) 웹 대시보드 (Vercel)
 
-이 프로젝트는 최신 리포트 접근성을 위해 아래 파일을 사용합니다.
+테스트 실행 결과는 자동으로 Vercel 웹 대시보드에 업로드됩니다.
 
-- `allure-reports/LATEST.txt`: 최신 실행 timestamp 기록
-- `allure-reports/LATEST/index.html`: 최신 리포트로 리다이렉트(정렬과 무관)
+- **URL**: https://allure-dashboard-three.vercel.app
+- **기능**: 실행 이력 목록, 테스트 통계 (passed/failed/broken/skipped), 첨부파일 뷰어
+- **첨부파일**: 스크린샷(이미지 미리보기), 비디오(재생), logcat/page_source(텍스트 뷰어)
+- **저장소**: Vercel Postgres (메타데이터) + Vercel Blob (첨부파일)
 
-추가 팁
+### 업로드 방식
 
-- 특정 실행 리포트는 `allure-reports/<timestamp>/index.html`을 열면 됩니다.
-- 브라우저 보안 정책 때문에, 대시보드는 `file://`로 열면 `runs.json` 로딩이 막힐 수 있어 **간단 서버로 여는 것을 권장**합니다.
-
-추가로, 전체 실행 이력을 한 화면에서 보고 싶은 경우 아래 대시보드를 사용합니다.
-
-- `allure-reports/dashboard/index.html`: 전체 실행 이력 목록(클릭 시 해당 리포트로 이동)
-
-대시보드는 `runs.json`을 읽어 렌더링하므로, 로컬에서 아래처럼 **레포 루트에서** 간단 서버로 여는 것을 권장합니다.
+`run_allure.py`가 테스트 실행 후 자동으로 `upload_to_dashboard.py`를 호출합니다.
 
 ```bash
+# 기본 동작: 테스트 → 리포트 생성 → 대시보드 업로드
+python tools/run_allure.py -- tests/android/gme1_test.py -v --platform=android
+
+# 업로드 끄기
+python tools/run_allure.py --no-upload -- tests/android/gme1_test.py -v --platform=android
+
+# 기존 리포트 수동 업로드
+python tools/upload_to_dashboard.py 20260221_153012
+python tools/upload_to_dashboard.py --all    # 전체 일괄 업로드
+```
+
+### 첨부파일 업로드 조건
+
+- `.env`에 `BLOB_READ_WRITE_TOKEN`이 설정되어야 첨부파일이 업로드됩니다.
+- 토큰이 없으면 메타데이터(테스트 통계)만 업로드되고, 첨부파일은 건너뜁니다.
+
+---
+
+## 6.1) 로컬 리포트 접근
+
+로컬에서도 리포트를 확인할 수 있습니다.
+
+- `allure-reports/LATEST.txt`: 최신 실행 timestamp 기록
+- `allure-reports/LATEST/index.html`: 최신 리포트로 리다이렉트
+
+특정 실행 리포트는 `allure-reports/<timestamp>/index.html`을 열면 됩니다.
+
+### 로컬 대시보드
+
+전체 실행 이력을 로컬에서 보려면 간단 서버가 필요합니다.
+
+```bash
+# 레포 루트에서 실행
 python -m http.server 8000
 ```
 
-브라우저 접속:
+브라우저 접속: `http://127.0.0.1:8000/allure-reports/dashboard/`
 
-- `http://127.0.0.1:8000/allure-reports/dashboard/`
-
-중요
-
-- 서버를 `allure-reports/dashboard` 폴더에서 띄우면 상위 리포트 폴더에 접근할 수 없어 404가 발생합니다.
-- 대시보드 링크는 현재 URL 기준으로 동적 계산되므로, 레포 루트에서 띄우면 환경/PC가 달라도 동일하게 동작합니다.
+> 서버를 `allure-reports/dashboard` 폴더에서 띄우면 상위 리포트 폴더에 접근할 수 없어 404가 발생합니다. 반드시 레포 루트에서 띄우세요.
 
 ---
 
