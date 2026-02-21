@@ -52,5 +52,5 @@ apk/
 # Appium Inspector session files (contains user-specific paths)
 *.appiumsession
 
-# Claude Code
-.claude/CLAUDE.md
+# Claude Code (로컬 전용, Git 미추적)
+.claude/
