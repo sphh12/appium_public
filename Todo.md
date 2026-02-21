@@ -99,6 +99,12 @@
 ### 2026-02-22
 - [x] 문서 업데이트 (README.md 전면 재작성, ALLURE_REPORT_GUIDE.md, CLAUDE.md)
 - [x] run_allure.py 자동 패키지 설치 기능 추가
+- [x] run-app.sh 대시보드 자동 업로드 (STEP 5) 추가
+- [x] upload_to_dashboard.py .env 자동 로드 수정
+- [x] upload_to_dashboard.py Blob 스토리지 자동 정리 기능 (80% 초과 시 자동 삭제)
+- [x] 워크플로우 개선 (Git Push md 업데이트 규칙, 브리핑, 중간 기록 규칙)
+- [x] .claude/ Git 추적 제외 설정
+- [x] allure-dashboard CLAUDE.md 생성
 
 ### 2026-02-21
 - [x] Vercel Blob 연동 (스크린샷/비디오/로그 첨부파일 저장)

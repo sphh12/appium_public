@@ -31,6 +31,38 @@ Phase 2 완료 후 변경된 프로젝트 구조와 워크플로우를 문서에
 - requirements.txt 기반 전체 설치 또는 누락분만 개별 설치
 - 패키지 미설치로 인한 실행 실패 예방
 
+### run-app.sh 대시보드 자동 업로드 (STEP 5)
+
+- `shell/run-app.sh`에 STEP 5 추가: 테스트 → 리포트 → **대시보드 업로드** 자동 진행
+- `./shell/run-aos.sh --basic_01_test` 한 줄로 전체 파이프라인 실행 가능
+- 업로드 실패 시 경고만 표시하고 스크립트 계속 진행 (graceful)
+
+### upload_to_dashboard.py .env 자동 로드
+
+- 셸 스크립트에서 호출 시 `.env` 파일이 로드되지 않는 문제 수정
+- python-dotenv 있으면 사용, 없으면 수동 파싱으로 fallback
+- `BLOB_READ_WRITE_TOKEN` 등 환경변수가 어디서 호출하든 자동 로드
+
+### upload_to_dashboard.py Blob 스토리지 자동 정리
+
+- Vercel Blob 사용량이 80%(400MB) 초과 시 오래된 리포트 첨부파일 자동 삭제
+- 타임스탬프 기준 가장 오래된 리포트부터 50MB 확보될 때까지 삭제
+- 업로드 전 `_cleanup_old_blobs()` 자동 실행
+- Hobby 플랜 500MB 한도 내에서 안정적 운영 보장
+
+### 워크플로우 개선 (CLAUDE.md, MEMORY.md, Todo.md)
+
+- CLAUDE.md: Git Push 워크플로우에 md 파일 업데이트 단계 추가, 브리핑 워크플로우 추가, 중간 진행 기록 규칙 추가
+- MEMORY.md: Git Push 시 md 파일 업데이트 규칙, 프롬프트 스타일 팁 추가
+- Todo.md: 진행 중 최상단, 완료 아카이브 최하단으로 구조 재편
+- allure-dashboard CLAUDE.md 신규 생성 (프로젝트 가이드)
+
+### .claude/ Git 추적 제외
+
+- 두 프로젝트 모두 `.claude/` 디렉토리를 `.gitignore`에 추가
+- 기존 git 추적 중이던 CLAUDE.md를 `git rm --cached`로 제거
+- 로컬에서는 Claude Code용으로 계속 사용, Git에는 올라가지 않음
+
 ---
 
 ## 2026-02-21
