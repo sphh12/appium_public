@@ -9,8 +9,6 @@
 - [x] 상세 페이지에서 첨부파일 뷰어 구현 (이미지 미리보기, 비디오 재생, 텍스트 뷰어)
 - [x] allure-dashboard GitHub 연동 → push 시 자동 배포 활성화
 - [x] `--upload` 옵션 기본 활성화 + 프로덕션 URL 기본값 설정
-- [ ] 대시보드 커스텀 도메인 설정 검토
-- [ ] allure-dashboard git config email을 `sph12.test@gmail.com`으로 유지 (Vercel 배포용)
 
 ### 알려진 사항
 - allure-dashboard: GitHub `sphh12/allure-dashboard` 연결 완료, Git push → Vercel 자동 배포
