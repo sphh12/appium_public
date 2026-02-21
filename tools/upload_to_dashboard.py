@@ -24,6 +24,19 @@ import urllib.request
 import urllib.error
 from pathlib import Path
 
+# .env 파일 자동 로드 (python-dotenv가 있으면 사용, 없으면 수동 파싱)
+_env_file = Path(__file__).resolve().parent.parent / ".env"
+try:
+    from dotenv import load_dotenv
+    load_dotenv(_env_file)
+except ImportError:
+    if _env_file.exists():
+        for line in _env_file.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, _, val = line.partition("=")
+                os.environ.setdefault(key.strip(), val.strip())
+
 # update_dashboard.py의 로직을 재사용
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from update_dashboard import (
@@ -37,6 +50,104 @@ from update_dashboard import (
 
 DEFAULT_DASHBOARD_URL = "https://allure-dashboard-three.vercel.app"
 BLOB_API_URL = "https://blob.vercel-storage.com"
+BLOB_STORAGE_LIMIT_MB = 500  # Vercel Hobby 플랜 한도
+BLOB_CLEANUP_THRESHOLD = 0.8  # 80% 초과 시 정리 시작
+
+
+# ─── Blob 용량 관리 함수 ─────────────────────────────────────────────
+
+def _get_blob_usage(token: str) -> tuple[float, list[dict]]:
+    """Vercel Blob의 현재 사용량(MB)과 파일 목록을 반환합니다."""
+    url = f"{BLOB_API_URL}?limit=1000"
+    req = urllib.request.Request(
+        url,
+        headers={"Authorization": f"Bearer {token}"},
+        method="GET",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            result = json.loads(resp.read().decode("utf-8"))
+            blobs = result.get("blobs", [])
+            total_bytes = sum(b.get("size", 0) for b in blobs)
+            return total_bytes / (1024 * 1024), blobs
+    except Exception as e:
+        print(f"    [warn] Blob 사용량 조회 실패: {e}")
+        return 0.0, []
+
+
+def _extract_timestamp_from_blob(pathname: str) -> str:
+    """Blob 경로에서 타임스탬프를 추출합니다. (예: attachments/20260221_153012/xxx → 20260221_153012)"""
+    parts = pathname.strip("/").split("/")
+    if len(parts) >= 2:
+        candidate = parts[1]
+        if _TIMESTAMP_DIR_RE.match(candidate):
+            return candidate
+    return ""
+
+
+def _delete_blob(url: str, token: str) -> bool:
+    """Vercel Blob 파일을 삭제합니다."""
+    data = json.dumps({"urls": [url]}).encode("utf-8")
+    req = urllib.request.Request(
+        f"{BLOB_API_URL}/delete",
+        data=data,
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+            "x-api-version": "7",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30):
+            return True
+    except Exception:
+        return False
+
+
+def _cleanup_old_blobs(token: str, needed_mb: float = 0) -> None:
+    """용량이 80%를 초과하면 가장 오래된 리포트의 첨부파일부터 삭제합니다."""
+    usage_mb, blobs = _get_blob_usage(token)
+    threshold_mb = BLOB_STORAGE_LIMIT_MB * BLOB_CLEANUP_THRESHOLD
+
+    if usage_mb + needed_mb <= threshold_mb:
+        return
+
+    print(f"    [cleanup] Blob 사용량: {usage_mb:.1f}MB / {BLOB_STORAGE_LIMIT_MB}MB ({usage_mb/BLOB_STORAGE_LIMIT_MB*100:.0f}%)")
+
+    # 타임스탬프별로 그룹화
+    ts_groups: dict[str, list[dict]] = {}
+    for blob in blobs:
+        ts = _extract_timestamp_from_blob(blob.get("pathname", ""))
+        if ts:
+            ts_groups.setdefault(ts, []).append(blob)
+
+    if not ts_groups:
+        return
+
+    # 오래된 타임스탬프 순으로 정렬
+    sorted_timestamps = sorted(ts_groups.keys())
+
+    freed_mb = 0.0
+    target_mb = (usage_mb + needed_mb) - threshold_mb + 50  # 50MB 여유 확보
+
+    for ts in sorted_timestamps:
+        if freed_mb >= target_mb:
+            break
+
+        group_blobs = ts_groups[ts]
+        group_size = sum(b.get("size", 0) for b in group_blobs) / (1024 * 1024)
+        deleted = 0
+
+        for blob in group_blobs:
+            if _delete_blob(blob["url"], token):
+                deleted += 1
+
+        if deleted > 0:
+            freed_mb += group_size
+            print(f"    [cleanup] {ts}: {deleted}개 파일 삭제 ({group_size:.1f}MB 확보)")
+
+    print(f"    [cleanup] 총 {freed_mb:.1f}MB 확보 완료")
 
 
 # ─── 첨부파일 관련 함수 ─────────────────────────────────────────────
@@ -174,6 +285,10 @@ def upload_attachments(
     if not attachments:
         print(f"    [info] {timestamp}: 첨부파일 없음")
         return True
+
+    # 업로드 전 용량 체크 + 필요 시 오래된 파일 정리
+    needed_mb = sum(a.get("size", 0) for a in attachments) / (1024 * 1024)
+    _cleanup_old_blobs(blob_token, needed_mb)
 
     print(f"    [blob] {len(attachments)}개 첨부파일 업로드 중...")
     uploaded: list[dict] = []
