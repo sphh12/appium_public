@@ -62,7 +62,16 @@
       "Bash(/Users/sph/Library/Android/sdk/platform-tools/adb shell settings put global stylus_handwriting_enabled 0)",
       "Bash(/Users/sph/Library/Android/sdk/platform-tools/adb shell settings put secure handwriting_enabled 0)",
       "Bash(/Users/sph/Library/Android/sdk/platform-tools/adb shell ime disable com.google.android.inputmethod.latin/com.android.inputmethod.latin.handwriting.HandwritingIME)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Bash(git config:*)",
+      "Bash(git commit:*)",
+      "Bash(gh auth login:*)",
+      "Bash(gh gist edit:*)",
+      "Bash(adb pull:*)",
+      "Bash(adb exec-out:*)",
+      "Bash(adb root:*)",
+      "Read(//Users/sph/appium/**)",
+      "Bash(done)"
     ]
   }
 }

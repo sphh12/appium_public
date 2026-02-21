@@ -4,16 +4,17 @@
 
 ## 2026-02-21
 
-### Allure Dashboard (Phase 2 - 추후 진행)
-- [ ] Vercel Blob 연동 (스크린샷/비디오/로그 첨부파일 저장)
-- [ ] 상세 페이지에서 첨부파일 실제 뷰어 구현 (이미지 미리보기, 비디오 재생)
-- [ ] allure-dashboard GitHub 저장소 생성 및 Git 연결 → push 시 자동 배포
-- [ ] `--upload` 옵션을 기본값으로 변경 검토 (Vercel URL 확정 후)
+### Allure Dashboard (Phase 2 완료, Phase 3 검토)
+- [x] Vercel Blob 연동 (스크린샷/비디오/로그 첨부파일 저장)
+- [x] 상세 페이지에서 첨부파일 뷰어 구현 (이미지 미리보기, 비디오 재생, 텍스트 뷰어)
+- [x] allure-dashboard GitHub 연동 → push 시 자동 배포 활성화
+- [x] `--upload` 옵션 기본 활성화 + 프로덕션 URL 기본값 설정
 - [ ] 대시보드 커스텀 도메인 설정 검토
+- [ ] allure-dashboard git config email을 `sph12.test@gmail.com`으로 유지 (Vercel 배포용)
 
 ### 알려진 사항
-- allure-dashboard는 현재 `~/allure-dashboard/` 로컬 저장소 (GitHub 미연결)
-- Vercel은 CLI 배포 방식으로 운영 중 (Git 연동 배포로 전환 가능)
+- allure-dashboard: GitHub `sphh12/allure-dashboard` 연결 완료, Git push → Vercel 자동 배포
+- appium `.env`에 `BLOB_READ_WRITE_TOKEN` 추가됨 (Blob 업로드용)
 
 ---
 

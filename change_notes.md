@@ -2,6 +2,35 @@
 
 ## 2026-02-21
 
+### Phase 2: Vercel Blob 첨부파일 + 뷰어 구현
+
+Allure 리포트의 첨부파일(스크린샷, 비디오, 로그, XML, JSON)을 Vercel Blob에 저장하고,
+상세 페이지에서 타입별 뷰어로 확인할 수 있게 구현 완료.
+
+#### allure-dashboard 변경
+- **Prisma 스키마**: Artifact 모델에 `source` 필드 + `@@unique([runId, source])` 제약 추가
+- **API**: `POST/GET /api/runs/[timestamp]/artifacts` 엔드포인트 신규 구현
+- **ArtifactViewer 컴포넌트** (신규):
+  - 스크린샷: 썸네일 그리드 → 클릭 시 모달 확대
+  - 비디오: `<video>` 태그 재생 (controls, preload=metadata)
+  - 텍스트/XML/JSON: 접기/펼치기 lazy 로딩 뷰어
+- **next.config.ts**: Blob 이미지 도메인 (`*.public.blob.vercel-storage.com`) 등록
+- **상세 페이지**: 기존 단순 목록 → ArtifactViewer 컴포넌트로 교체
+- **배포**: GitHub 연동 자동 배포 활성화 (`sphh12/allure-dashboard`)
+
+#### appium 변경
+- **`tools/upload_to_dashboard.py`**: Vercel Blob REST API 직접 업로드 기능 추가
+  - `_collect_attachments()`: testStage/beforeStages/afterStages에서 첨부파일 메타데이터 수집
+  - `_upload_to_blob()`: PUT으로 Blob에 직접 업로드 (4.5MB 제한 우회)
+  - `_save_artifact_metadata()`: API에 메타데이터 일괄 저장
+  - `--no-attachments`: 메타데이터만 업로드 옵션
+  - `BLOB_READ_WRITE_TOKEN` 미설정 시 graceful fallback
+
+#### 마이그레이션
+- 전체 19개 리포트 업로드 완료 (첨부파일 있는 5개 포함, 총 37개 파일)
+
+---
+
 ### Allure Dashboard - Next.js 웹 대시보드 구축 + Vercel 배포
 
 기존 로컬 전용(`tools/serve.py`) 대시보드를 Next.js 기반 웹 대시보드로 전환하여 Vercel에 배포 완료.

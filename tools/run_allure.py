@@ -158,13 +158,19 @@ def main() -> int:
     parser.add_argument(
         "--upload",
         action="store_true",
-        default=False,
-        help="리포트 생성 후 대시보드 API에 업로드",
+        default=True,
+        help="리포트 생성 후 대시보드 API에 업로드 (기본: 켜짐)",
+    )
+    parser.add_argument(
+        "--no-upload",
+        dest="upload",
+        action="store_false",
+        help="대시보드 업로드 끄기",
     )
     parser.add_argument(
         "--dashboard-url",
-        default="http://localhost:3000",
-        help="대시보드 API URL (--upload 사용 시)",
+        default="https://allure-dashboard-three.vercel.app",
+        help="대시보드 API URL (기본: 프로덕션)",
     )
     parser.add_argument(
         "pytest_args",
