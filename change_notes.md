@@ -2,6 +2,19 @@
 
 ## 2026-02-22
 
+### Claude Code 상태줄(statusLine) 설정 (Windows 환경)
+
+- `~/.claude/settings.json`에 statusLine 설정 추가
+- `~/.claude/statusline-command.sh` 스크립트 생성
+  - 표시 항목: 세션 이름, 현재 디렉토리(~ 축약), 모델명, 컨텍스트 사용량(색상 경고), Vim 모드
+  - Windows 환경에 `jq` 미설치 → `grep`+`sed`로 JSON 파싱 (외부 의존성 없음)
+  - 컨텍스트 사용량: 60% 미만(초록), 60~79%(노랑), 80% 이상(빨강)
+- MEMORY.md에 OS별 상태줄 설정 가이드 추가
+
+변경 파일:
+- ~/.claude/settings.json
+- ~/.claude/statusline-command.sh (신규)
+
 ### 문서 업데이트 (README.md, ALLURE_REPORT_GUIDE.md, CLAUDE.md)
 
 Phase 2 완료 후 변경된 프로젝트 구조와 워크플로우를 문서에 반영.

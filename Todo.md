@@ -97,6 +97,7 @@
 ## 완료 아카이브
 
 ### 2026-02-22
+- [x] Claude Code 상태줄 설정 (Windows 환경, jq 없이 동작)
 - [x] 문서 업데이트 (README.md 전면 재작성, ALLURE_REPORT_GUIDE.md, CLAUDE.md)
 - [x] run_allure.py 자동 패키지 설치 기능 추가
 - [x] run-app.sh 대시보드 자동 업로드 (STEP 5) 추가
