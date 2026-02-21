@@ -668,6 +668,21 @@ if [[ "$OPEN_REPORT" == true ]]; then
 fi
 
 # ========================================
+# STEP 5: Upload to Web Dashboard
+# ========================================
+UPLOAD_SCRIPT="$PROJECT_ROOT/tools/upload_to_dashboard.py"
+if [[ -f "$UPLOAD_SCRIPT" ]]; then
+    echo "[STEP 5] Uploading to web dashboard..."
+    python "$UPLOAD_SCRIPT" "$TIMESTAMP" 2>&1 && \
+        echo -e "${GREEN}[OK] Dashboard upload complete${NC}" || \
+        echo -e "${YELLOW}[SKIP] Dashboard upload failed (check network or token)${NC}"
+    echo ""
+else
+    echo "[STEP 5] Upload script not found, skipping..."
+    echo ""
+fi
+
+# ========================================
 # Summary
 # ========================================
 echo "========================================"
@@ -678,16 +693,12 @@ else
 fi
 echo "========================================"
 echo ""
-echo "Results:   $RESULTS_DIR"
-echo "Report:    $REPORT_DIR"
-echo "Dashboard: allure-reports/dashboard/index.html"
+echo "Results:    $RESULTS_DIR"
+echo "Report:     $REPORT_DIR"
+echo "Dashboard:  https://allure-dashboard-three.vercel.app"
 echo ""
-echo "To view the report:"
+echo "To view the local report:"
 echo "  allure open $REPORT_DIR"
-echo ""
-echo "To view the dashboard (all test history):"
-echo "  cd allure-reports/dashboard && python -m http.server 8000"
-echo "  Then open: http://localhost:8000"
 echo ""
 
 exit $TEST_EXIT_CODE

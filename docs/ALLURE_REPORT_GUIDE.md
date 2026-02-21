@@ -209,19 +209,24 @@ Allure UI에서 가장 자주 보는 상태 의미는 아래와 같습니다.
 
 ### 업로드 방식
 
-`run_allure.py`가 테스트 실행 후 자동으로 `upload_to_dashboard.py`를 호출합니다.
+Shell 스크립트 또는 `run_allure.py`로 테스트를 실행하면 자동으로 대시보드에 업로드됩니다.
 
 ```bash
-# 기본 동작: 테스트 → 리포트 생성 → 대시보드 업로드
-python tools/run_allure.py -- tests/android/gme1_test.py -v --platform=android
+# Shell 스크립트 (권장)
+./shell/run-aos.sh --basic_01_test          # Staging (기본)
+./shell/run-aos.sh --basic_01_test --live   # Live
+./shell/run-ios.sh --ios_contacts_test      # iOS
 
-# 업로드 끄기
-python tools/run_allure.py --no-upload -- tests/android/gme1_test.py -v --platform=android
+# run_allure.py 직접 실행
+python tools/run_allure.py -- tests/android/gme1_test.py -v --platform=android
 
 # 기존 리포트 수동 업로드
 python tools/upload_to_dashboard.py 20260221_153012
 python tools/upload_to_dashboard.py --all    # 전체 일괄 업로드
 ```
+
+> - 파일명에서 `.py`는 생략 가능 (`--basic_01_test` = `--basic_01_test.py`)
+> - `--stg` (기본) / `--live`로 실행 환경(APK) 지정 가능
 
 ### 첨부파일 업로드 조건
 

@@ -69,21 +69,24 @@ python tools/run_allure.py --no-upload -- tests/android/gme1_test.py -v --platfo
 python tools/run_allure.py -- tests/android/gme1_test.py -v --platform=android --record-video
 ```
 
-### Shell 스크립트
+### Shell 스크립트 (권장)
 
 ```bash
-# Android
-./shell/run-aos.sh
+# Android 테스트
+./shell/run-aos.sh --basic_01_test          # Staging (기본)
+./shell/run-aos.sh --basic_01_test --live   # Live
+./shell/run-aos.sh --gme1_test --test test_Login  # 특정 테스트만
 
-# iOS
-./shell/run-ios.sh
+# iOS 테스트
+./shell/run-ios.sh --ios_contacts_test
 
-# 전체 기능 스크립트 (Android)
-./shell/run-app.sh --gme1_test
-./shell/run-app.sh --gme1_test --test test_Login
-./shell/run-app.sh --files "tests/android/gme1_test.py tests/android/xml_test.py"
-./shell/run-app.sh --all --report
+# 전체 테스트 + 리포트 열기
+./shell/run-aos.sh --all --report
 ```
+
+> - 파일명에서 `.py`는 생략 가능 (`--basic_01_test` = `--basic_01_test.py`)
+> - `--stg` (기본) / `--live`로 실행 환경(APK) 지정 가능
+> - 테스트 실행 → Allure 리포트 생성 → 웹 대시보드 업로드까지 자동 처리
 
 ### 수동 실행
 
