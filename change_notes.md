@@ -1,5 +1,23 @@
 # Change Notes
 
+## 2026-02-23
+
+### Public 저장소 푸시 가이드 문서 생성
+
+- **`docs/PUBLIC_PUSH_GUIDE.md` 신규 생성**: Private → Public 저장소 푸시 규칙 및 워크플로우 문서화
+  - 저장소 정보: Private(`github`, `gitlab`) / Public(`public`) remote 구분 정리
+  - 민감 파일 처리: `.env` → `.env.example` 대체, `.gitignore` 필수 제외 항목 정리
+  - 코드 내 민감정보: 환경변수 처리 대상(계정, 토큰, 경로, URL) 및 허용 기본값 명시
+  - 푸시 전 검증 체크리스트: 8개 항목 점검 + grep 검색 명령어 제공
+  - **푸시 후 원상복구 규칙**: `git stash` 활용 방법 및 별도 브랜치 방법 2가지 제시
+  - 전체 워크플로우: 검증 → 백업 → 수정 → 커밋 → 푸시 → 복구 → 확인 7단계
+- **`public` remote 추가**: `https://github.com/sphh12/appium_public.git`
+
+추가 파일:
+- [docs/PUBLIC_PUSH_GUIDE.md](docs/PUBLIC_PUSH_GUIDE.md) (신규)
+
+---
+
 ## 2026-02-22
 
 ### Claude Code 상태줄(statusLine) 설정 (Windows 환경)

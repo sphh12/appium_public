@@ -1,6 +1,6 @@
 # Todo - 해결 필요 항목
 
-> 마지막 업데이트: 2026-02-22
+> 마지막 업데이트: 2026-02-23
 
 ---
 
@@ -95,6 +95,10 @@
 ---
 
 ## 완료 아카이브
+
+### 2026-02-23
+- [x] docs/PUBLIC_PUSH_GUIDE.md 신규 생성 (Public 저장소 푸시 규칙 및 워크플로우)
+- [x] `public` remote 추가 (appium_public)
 
 ### 2026-02-22
 - [x] Claude Code 상태줄 설정 (Windows 환경, jq 없이 동작)
