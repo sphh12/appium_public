@@ -1,3 +1,14 @@
+# -*- coding: utf-8 -*-
+import sys
+import os
+# Windows cp949 인코딩 문제 방지
+if sys.platform == "win32":
+    os.environ.setdefault("PYTHONIOENCODING", "utf-8")
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 """Allure 테스트 결과를 Next.js 대시보드 API로 업로드합니다.
 
 사용법:

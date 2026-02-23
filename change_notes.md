@@ -1,5 +1,15 @@
 # Change Notes
 
+## 2026-02-24
+
+### Windows cp949 인코딩 문제 수정
+
+- **`shell/run-app.sh`**: `PYTHONIOENCODING=utf-8`, `PYTHONUTF8=1` 환경변수 추가 (macOS에서는 영향 없음)
+- **`tools/upload_to_dashboard.py`**: Windows 전용 stdout/stderr UTF-8 재설정 추가 (`sys.platform == "win32"` 조건)
+- **`package.json`**: appium-uiautomator2-driver `6.8.1` → `6.9.3` 업데이트
+
+---
+
 ## 2026-02-23
 
 ### Public 저장소 푸시 가이드 문서 생성

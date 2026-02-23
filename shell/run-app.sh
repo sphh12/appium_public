@@ -16,6 +16,10 @@
 #   --skip-check  : skip prerequisite checks
 #   --no-auto     : don't auto-start missing prerequisites
 
+# Windows cp949 인코딩 문제 방지 (Python UTF-8 강제)
+export PYTHONIOENCODING=utf-8
+export PYTHONUTF8=1
+
 # ~/.zshrc 환경변수 로드 (bash에서 실행 시 ANDROID_HOME, nvm 등 PATH 누락 방지)
 if [[ -f "$HOME/.zshrc" ]]; then
     source "$HOME/.zshrc" 2>/dev/null
