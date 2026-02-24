@@ -27,7 +27,7 @@ PACKAGE = "com.gmeremit.online.gmeremittance_native"
 ACTIVITY = ".splash_screen.view.SplashScreen"
 RID = f"{PACKAGE}:id"
 
-OUTPUT_DIR = "/Users/sph/appium/ui_dumps/debug_keyboard"
+OUTPUT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "ui_dumps", "debug_keyboard")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 

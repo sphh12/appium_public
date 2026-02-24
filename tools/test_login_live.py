@@ -162,7 +162,7 @@ def main():
         print(f"\n[ERROR] 테스트 실패: {e}")
         # 실패 시 진단 파일 일괄 저장 (스크린샷 + XML + logcat)
         try:
-            error_dir = "/Users/sph/appium/ui_dumps"
+            error_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "ui_dumps")
             save_error_snapshot(driver, error_dir, "error_login_test")
         except Exception:
             pass

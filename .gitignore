@@ -52,5 +52,11 @@ apk/
 # Appium Inspector session files (contains user-specific paths)
 *.appiumsession
 
+# UI 덤프 (앱 구조 정보 포함)
+ui_dumps/
+
+# 디버그 산출물
+debug_output/
+
 # Claude Code (로컬 전용, Git 미추적)
 .claude/
