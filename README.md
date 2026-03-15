@@ -156,8 +156,8 @@ STEP 5: 리포트 브라우저 열기 (선택)
 ### 설치
 
 ```bash
-git clone https://github.com/your-username/appium-portfolio.git
-cd appium-portfolio
+git clone https://github.com/sphh12/appium_public.git
+cd appium_public
 
 # Python 가상환경
 python3 -m venv venv
