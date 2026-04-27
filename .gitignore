@@ -1,0 +1,59 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Python
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Node.js
+node_modules/
+package-lock.json
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.history/
+
+# Test results
+reports/
+allure-results/
+allure-report/
+allure-reports/
+*.html
+!templates/*.html
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# APK files
+apk/
+*.apk
+*.apk+
+
+# UI dumps (앱 구조 정보 포함)
+ui_dumps/
+
+# PDF files (generated)
+*.pdf
+
+# Appium Inspector session files (contains user-specific paths)
+*.appiumsession
+
+# 디버그 산출물
+debug_output/
